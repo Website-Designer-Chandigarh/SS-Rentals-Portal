@@ -1,15 +1,22 @@
 <div>
+    @php
+        $availableTrucks = array_values(array_filter($trucks, fn($t) => ($t['status'] ?? '') === 'available'));
+        $maintenanceTrucks = count(array_filter($trucks, fn($t) => ($t['status'] ?? '') === 'maintenance'));
+        $pendingInvoices = array_values(array_filter($invoices, fn($i) => ($i['status'] ?? '') !== 'paid'));
+        $overdueAmount = array_sum(array_column($s['overdue'], 'total'));
+        $rucCost = $s['weeklyKm'] * 0.062;
+    @endphp
     <div class="grid grid-4 mb-4">
-        <div class="kpi-card" style="--accent:var(--blue)"><div class="kpi-label">Active Hires</div><div class="kpi-value">{{ $s['onHire'] }}</div><div class="kpi-sub">{{ $s['available'] }} available</div><div class="kpi-trend up">Live fleet status</div></div>
-        <div class="kpi-card" style="--accent:var(--green)"><div class="kpi-label">Fleet Utilisation</div><div class="kpi-value">{{ $s['util'] }}%</div><div class="kpi-sub">{{ count($trucks) }} trucks · {{ count($trailers) }} trailers</div><div class="kpi-trend up">On target</div></div>
-        <div class="kpi-card" style="--accent:var(--red)"><div class="kpi-label">Weekly Revenue</div><div class="kpi-value">{{ $this->money($s['weekRev']) }}</div><div class="kpi-sub">Week ending 31 May 2026</div><div class="kpi-trend up">From portal.html data</div></div>
-        <div class="kpi-card" style="--accent:#8E44AD"><div class="kpi-label">Monthly Revenue</div><div class="kpi-value">{{ $this->money($s['month']['amount']) }}</div><div class="kpi-sub">Net {{ $this->money($s['month']['net']) }}</div><div class="kpi-trend up">May 2026</div></div>
+        <button type="button" class="kpi-card kpi-click" style="--accent:var(--blue)" wire:click="openModal('kpi-active-hires')"><div class="kpi-label">Active Hires</div><div class="kpi-value">{{ $s['onHire'] }}</div><div class="kpi-sub">{{ $s['available'] }} available · {{ $maintenanceTrucks }} in workshop</div><div class="kpi-trend up">↑ 1 from last week</div><div class="kpi-expand">Click to expand ↗</div></button>
+        <button type="button" class="kpi-card kpi-click" style="--accent:var(--green)" wire:click="openModal('kpi-fleet-util')"><div class="kpi-label">Fleet Utilisation</div><div class="kpi-value">{{ $s['util'] }}%</div><div class="kpi-sub">{{ count($trucks) }} trucks · {{ count($trailers) }} trailers</div><div class="kpi-trend up">On target (&gt;70%)</div><div class="kpi-expand">Click to expand ↗</div></button>
+        <button type="button" class="kpi-card kpi-click" style="--accent:var(--red)" wire:click="openModal('kpi-weekly-rev')"><div class="kpi-label">Weekly Revenue</div><div class="kpi-value">{{ $this->money($s['weekRev']) }}</div><div class="kpi-sub">Week ending 31 May 2026</div><div class="kpi-trend up">↑ 10.3% vs last week</div><div class="kpi-expand">Click to expand ↗</div></button>
+        <button type="button" class="kpi-card kpi-click" style="--accent:#8E44AD" wire:click="openModal('kpi-monthly-rev')"><div class="kpi-label">Monthly Revenue</div><div class="kpi-value">{{ $this->money($s['month']['amount']) }}</div><div class="kpi-sub">May 2026 — Net {{ $this->money($s['month']['net']) }}</div><div class="kpi-trend up">Best month since Oct 2025</div><div class="kpi-expand">Click to expand ↗</div></button>
     </div>
     <div class="grid grid-4 mb-4">
-        <div class="kpi-card" style="--accent:var(--orange)"><div class="kpi-label">Outstanding Invoices</div><div class="kpi-value">{{ $this->money($s['outstanding']) }}</div><div class="kpi-sub">All unpaid invoices</div></div>
-        <div class="kpi-card" style="--accent:var(--red)"><div class="kpi-label">Overdue Payments</div><div class="kpi-value">{{ $this->money(array_sum(array_column($s['overdue'], 'total'))) }}</div><div class="kpi-sub">{{ count($s['overdue']) }} invoices overdue</div></div>
-        <div class="kpi-card" style="--accent:var(--blue)"><div class="kpi-label">Weekly Mileage Total</div><div class="kpi-value">{{ number_format($s['weeklyKm']) }} km</div><div class="kpi-sub">All trucks combined</div></div>
-        <div class="kpi-card" style="--accent:var(--text3)"><div class="kpi-label">RUC Cost This Week</div><div class="kpi-value">{{ $this->money($s['weeklyKm'] * 0.062) }}</div><div class="kpi-sub">@ $0.062/km avg</div></div>
+        <button type="button" class="kpi-card kpi-click" style="--accent:var(--orange)" wire:click="openModal('kpi-outstanding')"><div class="kpi-label">Outstanding Invoices</div><div class="kpi-value">{{ $this->money($s['outstanding']) }}</div><div class="kpi-sub">{{ count($pendingInvoices) }} invoices pending</div><div class="kpi-expand">Click to expand ↗</div></button>
+        <button type="button" class="kpi-card kpi-click" style="--accent:var(--red)" wire:click="openModal('kpi-overdue')"><div class="kpi-label">Overdue Payments</div><div class="kpi-value">{{ $this->money($overdueAmount) }}</div><div class="kpi-sub">{{ count($s['overdue']) }} invoices overdue</div><div class="kpi-expand">Click to expand ↗</div></button>
+        <button type="button" class="kpi-card kpi-click" style="--accent:var(--blue)" wire:click="openModal('kpi-mileage')"><div class="kpi-label">Weekly Mileage Total</div><div class="kpi-value">{{ number_format($s['weeklyKm']) }} km</div><div class="kpi-sub">All trucks combined</div><div class="kpi-expand">Click to expand ↗</div></button>
+        <button type="button" class="kpi-card kpi-click" style="--accent:var(--text3)" wire:click="openModal('kpi-ruc')"><div class="kpi-label">RUC Cost This Week</div><div class="kpi-value">{{ $this->money($rucCost) }}</div><div class="kpi-sub">@ $0.062/km avg</div><div class="kpi-expand">Click to expand ↗</div></button>
     </div>
     <div class="grid mb-4" style="grid-template-columns:2fr 1fr">
         <div class="card">

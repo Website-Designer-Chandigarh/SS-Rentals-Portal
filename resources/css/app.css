@@ -76,12 +76,17 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
 /* KPI CARDS */
 .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden}
 .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent,var(--red))}
+.kpi-click{width:100%;text-align:left;color:inherit;cursor:pointer;transition:box-shadow .15s,transform .15s}
+.kpi-click:hover{box-shadow:0 6px 24px rgba(106,27,154,0.18);transform:translateY(-2px)}
+.kpi-expand{font-size:10px;color:var(--text3);margin-top:6px}
 .kpi-label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
 .kpi-value{font-size:26px;font-weight:800;color:var(--text);line-height:1}
 .kpi-sub{font-size:12px;color:var(--text2);margin-top:6px}
 .kpi-trend{font-size:11px;font-weight:600;margin-top:4px}
 .kpi-trend.up{color:var(--green)}
 .kpi-trend.down{color:var(--red-light)}
+.kpi-modal-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.kpi-modal-stat{background:var(--bg3);border-radius:10px;padding:14px 16px;text-align:center}
 /* BADGES */
 .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
 .badge-green{background:rgba(39,174,96,.15);color:#4ade80;border:1px solid rgba(39,174,96,.3)}
