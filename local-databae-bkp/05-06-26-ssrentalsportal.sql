@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:8889
--- Generation Time: Jun 05, 2026 at 08:10 AM
+-- Generation Time: Jun 05, 2026 at 09:00 AM
 -- Server version: 8.0.44
 -- PHP Version: 8.3.30
 
@@ -461,12 +461,12 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('cmAnHIKadk4oXDwglbixtCus5QclF72MWt52rIe4', 1, '::1', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiJTcnhUMVpFOWk1RHdVaWlqZjNBeThhY2hYdmJrSkh1WFNxWUpIYVdhIiwiX2ZsYXNoIjp7Im9sZCI6W10sIm5ldyI6W119LCJfcHJldmlvdXMiOnsidXJsIjoiaHR0cDpcL1wvbG9jYWxob3N0Ojg4ODhcL3BvcnRhbCIsInJvdXRlIjoicG9ydGFsIn0sImxvZ2luX3dlYl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjoxfQ==', 1780646768),
 ('DZeUZBOIlKVoVVqdtLHfbFA7CpgtSqCe0NGAJx5b', NULL, '::1', 'curl/8.7.1', 'eyJfdG9rZW4iOiJscFBEb3ZjUzVxTlRGQTAxd3VOSGJqaGpkSDR5QkdjdWNGa0dkN3NKIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cL2xvY2FsaG9zdDo4ODg4Iiwicm91dGUiOiJsb2dpbiJ9LCJfZmxhc2giOnsib2xkIjpbXSwibmV3IjpbXX19', 1780642737),
 ('iTHnaw5sVuxC7GGCWu6fFtbJFdzE4gj2b2gJ9RcY', NULL, '127.0.0.1', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiJqVlFTSzFhbmVVVmdPQW9XRTdTUW5xNTVDUTBDUmFsY2lnMDZpZEtOIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cLzEyNy4wLjAuMTo4MDAwIiwicm91dGUiOiJwb3J0YWwifSwiX2ZsYXNoIjp7Im9sZCI6W10sIm5ldyI6W119fQ==', 1780642280),
 ('jkRxxvNLLOqS2eUhEkVsNauas05IJtSu5VcF9P7V', NULL, '::1', 'curl/8.7.1', 'eyJfdG9rZW4iOiJFUUdxSXZ5bXpDbFhEMWhkdGtZU1BocWlwbm9vb2xWNXVvcFV4VkVNIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cL2xvY2FsaG9zdDo4ODg4Iiwicm91dGUiOiJwb3J0YWwifSwiX2ZsYXNoIjp7Im9sZCI6W10sIm5ldyI6W119fQ==', 1780642478),
 ('kxfHPxTkR3ixPJOKNGj6td58c27d0aSMYQAtKMRR', 1, '::1', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiJETjJkTTg1ampwZ2dkaTZtVU9xV2pVcjJIdnpVZzd2YXZBQVM3c0syIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cL2xvY2FsaG9zdDo4ODg4XC9wb3J0YWwiLCJyb3V0ZSI6InBvcnRhbCJ9LCJfZmxhc2giOnsib2xkIjpbXSwibmV3IjpbXX0sImxvZ2luX3dlYl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjoxfQ==', 1780643149),
-('u1GiDcYqEmt4LLOJuLBO293ObCH4blZhjNL5UeDC', NULL, '127.0.0.1', 'curl/8.7.1', 'eyJfdG9rZW4iOiJpbm51UjUxcndwMzNsUW92UldDRmFTbG1udnZYVllaWGE4VkoyZ1hQIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cLzEyNy4wLjAuMTo4MDAwIiwicm91dGUiOiJwb3J0YWwifSwiX2ZsYXNoIjp7Im9sZCI6W10sIm5ldyI6W119fQ==', 1780642266);
+('u1GiDcYqEmt4LLOJuLBO293ObCH4blZhjNL5UeDC', NULL, '127.0.0.1', 'curl/8.7.1', 'eyJfdG9rZW4iOiJpbm51UjUxcndwMzNsUW92UldDRmFTbG1udnZYVllaWGE4VkoyZ1hQIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cLzEyNy4wLjAuMTo4MDAwIiwicm91dGUiOiJwb3J0YWwifSwiX2ZsYXNoIjp7Im9sZCI6W10sIm5ldyI6W119fQ==', 1780642266),
+('yymjCSSytiq4MhwraM45bokeFWZ6beD70AoT1CVk', 1, '::1', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiJ0R240dGlmN2NwcnpPMHVyeHBxdFpTVGpNZTVpMG9oSjBMcUM5Y0tvIiwiX2ZsYXNoIjp7Im9sZCI6W10sIm5ldyI6W119LCJfcHJldmlvdXMiOnsidXJsIjoiaHR0cDpcL1wvbG9jYWxob3N0Ojg4ODhcL2ludm9pY2luZyIsInJvdXRlIjoicG9ydGFsLmludm9pY2luZyJ9LCJsb2dpbl93ZWJfNTliYTM2YWRkYzJiMmY5NDAxNTgwZjAxNGM3ZjU4ZWE0ZTMwOTg5ZCI6MX0=', 1780650006);
 
 -- --------------------------------------------------------
 
