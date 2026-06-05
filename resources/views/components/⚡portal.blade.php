@@ -17,7 +17,6 @@ use Livewire\Component;
 new class extends Component
 {
     public string $page = 'dashboard';
-    public string $theme = 'light';
     public string $search = '';
     public string $fleetTab = 'trucks';
     public string $customerStatus = 'all';
@@ -903,7 +902,7 @@ new class extends Component
                 @if($toast)
                     <span class="badge badge-green">{{ $toast }}</span>
                 @endif
-                <button type="button" class="btn btn-primary btn-sm" wire:click="openModal('hire')">+ New Hire</button>
+                <button type="button" class="btn btn-add btn-sm" wire:click="openModal('hire')">+ New Hire</button>
             </div>
         </header>
 

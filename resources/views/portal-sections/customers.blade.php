@@ -15,7 +15,7 @@
             <button type="button" class="tab {{ $customerStatus === 'blacklisted' ? 'active' : '' }}" wire:click="$set('customerStatus','blacklisted')">Blacklisted ({{ count($blacklistedCustomers) }})</button>
             <button type="button" class="tab {{ $customerStatus === 'inactive' ? 'active' : '' }}" wire:click="$set('customerStatus','inactive')">Inactive ({{ count($inactiveCustomers) }})</button>
         </div>
-        <button type="button" class="btn btn-primary btn-sm" wire:click="openModal('customer')">+ Add New Customer</button>
+        <button type="button" class="btn btn-add btn-sm" wire:click="openModal('customer')">+ Add New Customer</button>
     </div>
 
     <div class="grid grid-4 mb-4">

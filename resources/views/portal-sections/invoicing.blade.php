@@ -56,7 +56,7 @@
                 <button type="button" class="tab {{ $invoiceTab === $key ? 'active' : '' }}" wire:click="$set('invoiceTab','{{ $key }}')">{{ $label }}</button>
             @endforeach
         </div>
-        <button type="button" class="btn btn-primary" wire:click="openModal('invoice')">+ Generate Weekly Invoices</button>
+        <button type="button" class="btn btn-add" wire:click="openModal('invoice')">+ Generate Weekly Invoices</button>
     </div>
 
     @if($invoiceTab === 'overdue' && $overdueTotal > 0)

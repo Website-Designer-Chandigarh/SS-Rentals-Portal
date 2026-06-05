@@ -247,9 +247,9 @@
             @else
                 <button type="button" class="btn btn-ghost" wire:click="closeModal">{{ $isKpi ? 'Close' : 'Cancel' }}</button>
                 @if($isKpi)
-                @elseif($modal === 'vehicle')<button type="button" class="btn btn-primary" wire:click="saveVehicle">✓ {{ $selectedId ? 'Save Vehicle' : 'Add Vehicle' }}</button>
-                @elseif($modal === 'customer')<button type="button" class="btn btn-primary" wire:click="saveCustomer">✓ {{ $selectedId ? 'Save Changes' : 'Add Customer' }}</button>
-                @elseif($modal === 'hire')<button type="button" class="btn btn-primary" wire:click="saveHire">✓ {{ $selectedId ? 'Save Hire Agreement' : 'Create Hire Agreement' }}</button>
+                @elseif($modal === 'vehicle')<button type="button" class="btn {{ $selectedId ? 'btn-primary' : 'btn-add' }}" wire:click="saveVehicle">✓ {{ $selectedId ? 'Save Vehicle' : 'Add Vehicle' }}</button>
+                @elseif($modal === 'customer')<button type="button" class="btn {{ $selectedId ? 'btn-primary' : 'btn-add' }}" wire:click="saveCustomer">✓ {{ $selectedId ? 'Save Changes' : 'Add Customer' }}</button>
+                @elseif($modal === 'hire')<button type="button" class="btn {{ $selectedId ? 'btn-primary' : 'btn-add' }}" wire:click="saveHire">✓ {{ $selectedId ? 'Save Hire Agreement' : 'Create Hire Agreement' }}</button>
                 @elseif($modal === 'invoice')<button type="button" class="btn btn-primary" wire:click="saveInvoice">✓ Save Invoice</button>
                 @elseif($modal === 'navman')<button type="button" class="btn btn-primary" wire:click="saveNavman">✓ Save Navman</button>@endif
             @endif

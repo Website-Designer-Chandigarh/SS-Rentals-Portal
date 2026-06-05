@@ -10,7 +10,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @livewireStyles
     </head>
-    <body class="light">
+    <body>
         <main class="portal-shell">
             <livewire:portal :section="$section ?? 'dashboard'" />
         </main>
