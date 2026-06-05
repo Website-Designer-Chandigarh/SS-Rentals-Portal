@@ -5,20 +5,7 @@
         $pendingInvoices = array_values(array_filter($invoices, fn($i) => ($i['status'] ?? '') !== 'paid'));
         $overdueAmount = array_sum(array_column($s['overdue'], 'total'));
         $rucCost = $s['weeklyKm'] * 0.062;
-        $totalVehicles = count($trucks) + count($trailers);
     @endphp
-    <section class="dashboard-hero mb-4">
-        <div class="dashboard-hero-copy">
-            <span class="eyebrow">Live Fleet Command</span>
-            <h2>SS Rentals operational dashboard</h2>
-            <p>Track hires, fleet availability, invoice pressure, weekly kilometres, and RUC exposure from one responsive workspace.</p>
-        </div>
-        <div class="dashboard-hero-stats">
-            <div><strong>{{ $s['util'] }}%</strong><span>Fleet utilisation</span></div>
-            <div><strong>{{ $this->money($s['weekRev']) }}</strong><span>Weekly revenue</span></div>
-            <div><strong>{{ $totalVehicles }}</strong><span>Total assets</span></div>
-        </div>
-    </section>
     <div class="grid grid-4 mb-4">
         <button type="button" class="kpi-card kpi-click" style="--accent:var(--blue)" wire:click="openModal('kpi-active-hires')"><div class="kpi-icon">{!! $this->navIcon('hires') !!}</div><div class="kpi-label">Active Hires</div><div class="kpi-value">{{ $s['onHire'] }}</div><div class="kpi-sub">{{ $s['available'] }} available &middot; {{ $maintenanceTrucks }} in workshop</div><div class="kpi-trend up">&uarr; 1 from last week</div><div class="kpi-expand">Click to expand &nearr;</div></button>
         <button type="button" class="kpi-card kpi-click" style="--accent:var(--green)" wire:click="openModal('kpi-fleet-util')"><div class="kpi-icon">{!! $this->navIcon('fleet') !!}</div><div class="kpi-label">Fleet Utilisation</div><div class="kpi-value">{{ $s['util'] }}%</div><div class="kpi-sub">{{ count($trucks) }} trucks &middot; {{ count($trailers) }} trailers</div><div class="kpi-trend up">On target (&gt;70%)</div><div class="kpi-expand">Click to expand &nearr;</div></button>
