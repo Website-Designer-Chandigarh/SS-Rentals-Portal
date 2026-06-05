@@ -143,9 +143,41 @@ body {
     margin-bottom: 4px
 }
 
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #6A1B9A;
+    font-size: 14px;
+    transition: all .15s;
+    margin-bottom: 1px;
+    text-decoration: none;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left
+}
 
+.nav-item:hover {
+    background: rgba(106, 27, 154, 0.06);
+    color: #4A148C
+}
 
+.nav-item.active {
+    background: rgba(255, 111, 0, 0.10);
+    color: #FF6F00;
+    border: 1px solid rgba(255, 111, 0, 0.25)
+}
 
+.nav-item .nav-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    opacity: .8
+}
 
 .nav-icon svg {
     display: block;
@@ -354,10 +386,6 @@ body {
 
 /* KPI CARDS */
 .kpi-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 18px 20px;
     position: relative;
     overflow: hidden
 }
@@ -385,38 +413,18 @@ body {
     transform: translateY(-2px)
 }
 
-.kpi-expand {
-    font-size: 10px;
-    color: var(--text3);
-    margin-top: 6px
-}
 
-.kpi-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text2);
-    text-transform: uppercase;
-    letter-spacing: .6px;
-    margin-bottom: 8px
-}
 
-.kpi-value {
-    font-size: 26px;
-    font-weight: 800;
-    color: var(--text);
-    line-height: 1
-}
+
 
 .kpi-sub {
     font-size: 12px;
     color: var(--text2);
-    margin-top: 6px
 }
 
 .kpi-trend {
     font-size: 11px;
     font-weight: 600;
-    margin-top: 4px
 }
 
 .kpi-trend.up {
@@ -1207,14 +1215,7 @@ select option {
         border-top: 1px solid var(--border)
     }
 
-    .grid,
-    .grid-4,
-    .grid-3,
-    .grid-2,
-    .grid-auto {
-        grid-template-columns: 1fr !important;
-        gap: 12px
-    }
+   
 
     .card {
         border-radius: 12px;
@@ -1609,7 +1610,7 @@ body {
     border-radius: 8px;
     color: var(--purple);
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 500;
     border: 1px solid transparent;
 }
 
@@ -1820,14 +1821,13 @@ body {
 .kpi-label {
     font-size: 11px;
     color: #6f6677;
-    font-weight: 850;
-    letter-spacing: .9px;
-    margin-right: 42px
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
 .kpi-value {
-    font-size: 29px;
-    font-weight: 900;
+    font-size: 26px;
+    font-weight: 700;
     color: var(--ink)
 }
 
@@ -1838,7 +1838,7 @@ body {
 
 .kpi-trend {
     font-size: 12px;
-    font-weight: 850
+    font-weight: 700
 }
 
 .kpi-trend.up {
@@ -1852,7 +1852,7 @@ body {
 .kpi-expand {
     font-size: 11px;
     color: #988EA1;
-    font-weight: 700
+    text-align: right;
 }
 
 .badge {
@@ -2473,7 +2473,7 @@ code {
     }
 
     .kpi-value {
-        font-size: 27px
+        font-size: 16px
     }
 
     .card {
@@ -2555,12 +2555,13 @@ code {
 @media(max-width:480px) {
     .kpi-card {
         min-height: 132px;
-        padding: 18px
+        padding: 12px
     }
 
     .kpi-icon {
         width: 32px;
-        height: 32px
+        height: 32px;
+        display: none;
     }
 
     .tabs {
