@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@ssrentalsportal.test',
         ], [
             'name' => 'SS Rentals Admin',
+            'role' => 'super_admin_owner',
             'password' => Hash::make('password'),
         ]);
     }

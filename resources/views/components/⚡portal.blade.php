@@ -29,6 +29,7 @@ new class extends Component
     public ?string $modal = null;
     public ?string $selectedId = null;
     public string $toast = '';
+    public bool $mobileMenuOpen = false;
 
     public array $trucks = [];
     public array $trailers = [];
@@ -72,6 +73,17 @@ new class extends Component
         $this->page = $page;
         $this->search = '';
         $this->modal = null;
+        $this->mobileMenuOpen = false;
+    }
+
+    public function openMobileMenu(): void
+    {
+        $this->mobileMenuOpen = true;
+    }
+
+    public function closeMobileMenu(): void
+    {
+        $this->mobileMenuOpen = false;
     }
 
     public function toggleTheme(): void
@@ -641,6 +653,27 @@ new class extends Component
         return 'badge badge-'.($map[$status] ?? 'gray');
     }
 
+    public function navIcon(string $name, int $size = 18): string
+    {
+        $paths = [
+            'dashboard' => 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
+            'fleet' => 'M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
+            'customers' => 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
+            'hires' => 'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z',
+            'invoice' => 'M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z',
+            'reports' => 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z',
+            'maintenance' => 'M13.78 15.3L19.78 21.3L21.89 19.14L15.89 13.14L13.78 15.3ZM17.5 10C19.43 10 21 8.43 21 6.5C21 5.85 20.82 5.24 20.5 4.72L17.25 7.97L16.03 6.75L19.28 3.5C18.76 3.18 18.15 3 17.5 3C15.57 3 14 4.57 14 6.5C14 6.94 14.08 7.37 14.22 7.75L3 18.95C2.94 19 2.94 19.08 3 19.14L4.86 21C4.91 21.06 5 21.06 5.05 21L7.5 18.55L9.61 20.67L10.32 19.95L8.2 17.84L9.27 16.77L11.38 18.88L12.1 18.17L10 16.05L16.25 9.78C16.63 9.92 17.06 10 17.5 10Z',
+            'navman' => 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
+            'documents' => 'M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z',
+            'settings' => 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
+            'menu' => 'M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z',
+        ];
+
+        $path = $paths[$name] ?? $paths['dashboard'];
+
+        return '<svg width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="'.$path.'"/></svg>';
+    }
+
     public function summary(): array
     {
         $onHire = count(array_filter($this->trucks, fn ($t) => ($t['status'] ?? '') === 'on_hire'));
@@ -689,8 +722,8 @@ new class extends Component
             <div class="sidebar-section">
                 <div class="sidebar-section-label">{{ $section }}</div>
                 @foreach($items as [$id, $label, $icon])
-                    <button type="button" class="nav-item {{ $page === $id ? 'active' : '' }}" wire:click="setPage('{{ $id }}')">
-                        <span class="nav-icon">{{ strtoupper(substr($label, 0, 1)) }}</span>
+                    <button type="button" class="nav-item {{ in_array($id, ['dashboard', 'fleet', 'customers', 'hires']) ? 'mobile-primary-nav' : 'mobile-secondary-nav' }} {{ $page === $id ? 'active' : '' }}" wire:click="setPage('{{ $id }}')">
+                        <span class="nav-icon">{!! $this->navIcon($icon) !!}</span>
                         <span>{{ $label }}</span>
                         @if(($badges[$id] ?? 0) > 0)
                             <span class="nav-badge">{{ $badges[$id] }}</span>
@@ -699,6 +732,11 @@ new class extends Component
                 @endforeach
             </div>
         @endforeach
+
+        <button type="button" class="nav-item mobile-menu-nav {{ ! in_array($page, ['dashboard', 'fleet', 'customers', 'hires']) ? 'active' : '' }}" wire:click="openMobileMenu">
+            <span class="nav-icon">{!! $this->navIcon('menu') !!}</span>
+            <span>Menu</span>
+        </button>
 
         <div class="sidebar-footer">
             <div style="display:flex;align-items:center;gap:10px;padding:0 8px">
@@ -710,6 +748,32 @@ new class extends Component
             </div>
         </div>
     </aside>
+
+    <div class="mobile-menu-overlay {{ $mobileMenuOpen ? 'open' : '' }}" wire:click.self="closeMobileMenu">
+        <nav class="mobile-menu-panel">
+            <div class="mobile-menu-header">
+                <div>
+                    <div class="mobile-menu-title">Menu</div>
+                    <div class="mobile-menu-sub">SS Rentals Portal</div>
+                </div>
+                <button type="button" class="icon-btn" wire:click="closeMobileMenu">×</button>
+            </div>
+            @foreach($nav as $section => $items)
+                <div class="mobile-menu-section">
+                    <div class="sidebar-section-label">{{ $section }}</div>
+                    @foreach($items as [$id, $label, $icon])
+                        <button type="button" class="mobile-menu-item {{ $page === $id ? 'active' : '' }}" wire:click="setPage('{{ $id }}')">
+                            <span class="nav-icon">{!! $this->navIcon($icon) !!}</span>
+                            <span>{{ $label }}</span>
+                            @if(($badges[$id] ?? 0) > 0)
+                                <span class="nav-badge">{{ $badges[$id] }}</span>
+                            @endif
+                        </button>
+                    @endforeach
+                </div>
+            @endforeach
+        </nav>
+    </div>
 
     <div class="main">
         <header class="header">
