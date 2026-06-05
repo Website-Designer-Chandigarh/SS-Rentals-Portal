@@ -30,6 +30,10 @@ new class extends Component
     public ?string $selectedId = null;
     public string $toast = '';
     public bool $mobileMenuOpen = false;
+    public int $invoiceStep = 1;
+    public string $invoiceType = 'weekly';
+    public string $invoicePeriodFrom = '';
+    public string $invoicePeriodTo = '';
 
     public array $trucks = [];
     public array $trailers = [];
@@ -115,6 +119,10 @@ new class extends Component
         if ($modal === 'invoice') {
             $invoice = $id ? $this->findById($this->invoices, $id) : null;
             $this->invoiceForm = $invoice ? array_merge($this->emptyInvoice(), $invoice) : $this->emptyInvoice();
+            $this->invoiceStep = $id ? 3 : 1;
+            $this->invoiceType = 'weekly';
+            $this->invoicePeriodFrom = now()->subWeek()->toDateString();
+            $this->invoicePeriodTo = now()->toDateString();
         }
 
         if ($modal === 'navman') {
@@ -133,6 +141,68 @@ new class extends Component
     {
         $this->modal = null;
         $this->selectedId = null;
+        $this->invoiceStep = 1;
+    }
+
+    public function setVehicleAssetType(string $type): void
+    {
+        $this->vehicleForm['asset_type'] = $type === 'trailer' ? 'trailer' : 'truck';
+    }
+
+    public function setInvoiceType(string $type): void
+    {
+        $this->invoiceType = in_array($type, ['daily', 'weekly', 'monthly'], true) ? $type : 'weekly';
+    }
+
+    public function nextInvoiceStep(): void
+    {
+        if ($this->invoiceStep === 1 && blank($this->invoiceForm['hire'] ?? null)) {
+            return;
+        }
+
+        if ($this->invoiceStep === 2) {
+            $this->buildInvoicePreview();
+        }
+
+        $this->invoiceStep = min(3, $this->invoiceStep + 1);
+    }
+
+    public function previousInvoiceStep(): void
+    {
+        $this->invoiceStep = max(1, $this->invoiceStep - 1);
+    }
+
+    public function buildInvoicePreview(): void
+    {
+        $hire = $this->findById($this->hires, $this->invoiceForm['hire'] ?? null);
+        if (! $hire) {
+            return;
+        }
+
+        $truck = $this->findById($this->trucks, $hire['truck'] ?? null);
+        $days = max(1, \Illuminate\Support\Carbon::parse($this->invoicePeriodFrom)->diffInDays(\Illuminate\Support\Carbon::parse($this->invoicePeriodTo), false));
+        $weeks = max(1 / 7, $days / 7);
+        $weeklyKm = (float) ($truck['weekly_km'] ?? 0);
+        $periodKm = round($weeklyKm * $weeks);
+        $truckHire = round((float) ($hire['weekly_truck'] ?? 0) * $weeks, 2);
+        $trailerHire = round((float) ($hire['weekly_trailer'] ?? 0) * $weeks, 2);
+        $mileage = round($periodKm * (float) ($hire['mileage_rate'] ?? 0), 2);
+        $ruc = round($periodKm * (float) ($hire['ruc_rate'] ?? 0), 2);
+
+        $this->invoiceForm = array_merge($this->invoiceForm, [
+            'id' => $this->invoiceForm['id'] ?: 'INV-'.str_pad((string) (270 + count($this->invoices)), 4, '0', STR_PAD_LEFT),
+            'customer' => $hire['customer'] ?? '',
+            'hire' => $hire['id'],
+            'date' => now()->toDateString(),
+            'due' => now()->addDays(7)->toDateString(),
+            'period' => $this->invoicePeriodFrom.' to '.$this->invoicePeriodTo,
+            'truck_hire' => $truckHire,
+            'trailer_hire' => $trailerHire,
+            'mileage' => $mileage,
+            'ruc' => $ruc,
+            'total' => $truckHire + $trailerHire + $mileage + $ruc + (float) ($this->invoiceForm['damage'] ?? 0) + (float) ($this->invoiceForm['extras'] ?? 0),
+            'status' => 'draft',
+        ]);
     }
 
     public function saveVehicle(): void
@@ -206,7 +276,7 @@ new class extends Component
         $this->invoices = $this->upsert($this->invoices, $form);
         $this->persist('invoices');
         $this->flash('Invoice saved');
-        $this->closeModal();
+        $this->invoiceStep = 4;
     }
 
     public function generateInvoiceFromHire(string $hireId): void
@@ -400,7 +470,7 @@ new class extends Component
         return array_merge(
             ['truck_id' => $row['truck'] ?? null, 'trailer_id' => $row['trailer'] ?? null],
             Arr::only($row, [
-                'company', 'contact', 'phone', 'email', 'address', 'nzbn', 'status', 'weekly_truck', 'weekly_trailer',
+                'company', 'director', 'contact', 'phone', 'email', 'address', 'nzbn', 'status', 'weekly_truck', 'weekly_trailer',
                 'mileage_rate', 'ruc_rate', 'outstanding', 'payment_terms', 'joined', 'ytd_revenue', 'credit_rating', 'notes',
             ]),
         );
@@ -455,7 +525,7 @@ new class extends Component
     private function emptyCustomer(): array
     {
         return [
-            'id' => '', 'company' => '', 'contact' => '', 'phone' => '', 'email' => '', 'address' => 'Auckland, NZ',
+            'id' => '', 'company' => '', 'director' => '', 'contact' => '', 'phone' => '', 'email' => '', 'address' => 'Auckland, NZ',
             'nzbn' => '', 'status' => 'active', 'truck' => null, 'trailer' => null, 'weekly_truck' => 0, 'weekly_trailer' => 0,
             'mileage_rate' => 0.25, 'ruc_rate' => 0.62, 'outstanding' => 0, 'payment_terms' => '7 days',
             'joined' => now()->toDateString(), 'ytd_revenue' => 0, 'credit_rating' => 'B+', 'notes' => '',

@@ -25,8 +25,16 @@
             $stat = function ($label, $value, $color = 'var(--text)') {
                 return '<div class="kpi-modal-stat"><div style="font-size:22px;font-weight:800;color:'.$color.'">'.$value.'</div><div style="font-size:11px;color:var(--text2);font-weight:600;margin-top:4px">'.$label.'</div></div>';
             };
+            $modalTitles = [
+                'vehicle' => ($selectedId ? 'Edit Vehicle' : 'Add New Vehicle'),
+                'customer' => ($selectedId ? 'Edit Customer' : 'Add New Customer'),
+                'hire' => ($selectedId ? 'Edit Hire Agreement' : 'New Hire Agreement'),
+                'invoice' => 'Generate Invoice',
+                'navman' => 'Update Navman Values',
+            ];
+            $modalIcons = ['vehicle' => 'fleet', 'customer' => 'customers', 'hire' => 'hires', 'invoice' => 'invoice', 'navman' => 'navman'];
         @endphp
-        <div class="modal-header"><span class="modal-title">{{ $isKpi ? ($kpiTitles[$modal] ?? 'Details') : ucfirst($modal) }}</span><button type="button" class="icon-btn" wire:click="closeModal">×</button></div>
+        <div class="modal-header"><span class="modal-title">@if(! $isKpi && isset($modalIcons[$modal]))<span class="modal-title-icon">{!! $this->navIcon($modalIcons[$modal]) !!}</span>@endif{{ $isKpi ? ($kpiTitles[$modal] ?? 'Details') : ($modalTitles[$modal] ?? ucfirst($modal)) }}</span><button type="button" class="icon-btn" wire:click="closeModal">×</button></div>
         <div class="modal-body">
             @if($modal === 'kpi-active-hires')
                 <div class="kpi-modal-stats">{!! $stat('On Hire', count($activeHires), '#6A1B9A') !!}{!! $stat('Available', count($availableTrucks), '#27AE60') !!}{!! $stat('In Workshop', $maintenanceTrucks, '#FF6F00') !!}</div>
@@ -98,40 +106,153 @@
                 </tbody></table></div>
                 <div style="background:rgba(106,27,154,0.07);border:1px solid rgba(106,27,154,0.15);border-radius:10px;padding:14px;font-size:13px;color:var(--text2)">RUC must be purchased before trucks run out. Top up trucks with under 3 weeks remaining promptly.</div>
             @elseif($modal === 'vehicle')
-                <div class="form-row"><div class="form-group"><label>Type</label><select wire:model="vehicleForm.asset_type"><option value="truck">Truck</option><option value="trailer">Trailer</option></select></div><div class="form-group"><label>Rego</label><input wire:model="vehicleForm.rego"></div></div>
-                <div class="form-row"><div class="form-group"><label>Make</label><input wire:model="vehicleForm.make"></div><div class="form-group"><label>Model</label><input wire:model="vehicleForm.model"></div></div>
-                <div class="form-row-3"><div class="form-group"><label>Year</label><input wire:model="vehicleForm.year"></div><div class="form-group"><label>Status</label><select wire:model="vehicleForm.status"><option value="available">Available</option><option value="on_hire">On Hire</option><option value="maintenance">Maintenance</option></select></div><div class="form-group"><label>Value</label><input wire:model="vehicleForm.value"></div></div>
-                <div class="form-row"><div class="form-group"><label>COF Expiry</label><input type="date" wire:model="vehicleForm.cof_expiry"></div><div class="form-group"><label>Rego Expiry</label><input type="date" wire:model="vehicleForm.rego_expiry"></div></div>
+                <div class="segmented-control mb-4">
+                    <button type="button" class="{{ ($vehicleForm['asset_type'] ?? 'truck') === 'truck' ? 'active' : '' }}" wire:click="setVehicleAssetType('truck')"><span>{!! $this->navIcon('fleet', 16) !!}</span>Truck</button>
+                    <button type="button" class="{{ ($vehicleForm['asset_type'] ?? 'truck') === 'trailer' ? 'active' : '' }}" wire:click="setVehicleAssetType('trailer')"><span>{!! $this->navIcon('fleet', 16) !!}</span>Trailer</button>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Registration Number <span class="req">*</span></label><input wire:model="vehicleForm.rego" placeholder="e.g. MRU490"></div>
+                    <div class="form-group"><label>Make</label><input wire:model="vehicleForm.make" placeholder="e.g. Volvo"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Model</label><input wire:model="vehicleForm.model" placeholder="e.g. FH 540"></div>
+                    <div class="form-group"><label>Year</label><input wire:model="vehicleForm.year"></div>
+                </div>
+                <div class="form-group"><label>Vehicle Type / Description</label><input wire:model="vehicleForm.type" placeholder="{{ ($vehicleForm['asset_type'] ?? 'truck') === 'truck' ? 'e.g. 8x4 Curtainside Truck' : 'e.g. 5-Axle Curtainsider' }}"></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Odometer (km)</label><input type="number" wire:model="vehicleForm.odometer"></div>
+                    <div class="form-group"><label>Vehicle Value ($)</label><input type="number" wire:model="vehicleForm.value"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>COF Expiry</label><input type="date" wire:model="vehicleForm.cof_expiry"></div>
+                    <div class="form-group"><label>Rego Expiry</label><input type="date" wire:model="vehicleForm.rego_expiry"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Insurance Expiry</label><input type="date" wire:model="vehicleForm.insurance_expiry"></div>
+                    <div class="form-group"><label>Next Service Due (km)</label><input type="number" wire:model="vehicleForm.service_due_km" placeholder="e.g. 360000"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Next Service Date</label><input type="date" wire:model="vehicleForm.next_service"></div>
+                    @if(($vehicleForm['asset_type'] ?? 'truck') === 'truck')
+                        <div class="form-group"><label>RUC Balance (km)</label><input type="number" wire:model="vehicleForm.ruc_balance"></div>
+                    @else
+                        <div class="form-group"><label>Status</label><select wire:model="vehicleForm.status"><option value="available">Available</option><option value="on_hire">On Hire</option><option value="maintenance">Maintenance</option></select></div>
+                    @endif
+                </div>
+                @if(($vehicleForm['asset_type'] ?? 'truck') === 'truck')
+                    <div class="form-group"><label>Status</label><select wire:model="vehicleForm.status"><option value="available">Available</option><option value="on_hire">On Hire</option><option value="maintenance">Maintenance</option></select></div>
+                @endif
                 <div class="form-group"><label>Location</label><input wire:model="vehicleForm.location"></div>
+                <div class="form-group"><label>Notes</label><input wire:model="vehicleForm.note" placeholder="Any service, finance, or vehicle notes"></div>
             @elseif($modal === 'customer')
-                <div class="form-row"><div class="form-group"><label>Company</label><input wire:model="customerForm.company"></div><div class="form-group"><label>Status</label><select wire:model="customerForm.status"><option value="active">Active</option><option value="inactive">Inactive</option><option value="blacklisted">Blacklisted</option><option value="prospect">Prospect</option></select></div></div>
-                <div class="form-row"><div class="form-group"><label>Contact</label><input wire:model="customerForm.contact"></div><div class="form-group"><label>Phone</label><input wire:model="customerForm.phone"></div></div>
-                <div class="form-row"><div class="form-group"><label>Email</label><input wire:model="customerForm.email"></div><div class="form-group"><label>Credit Rating</label><input wire:model="customerForm.credit_rating"></div></div>
-                <div class="form-group"><label>Notes</label><textarea wire:model="customerForm.notes"></textarea></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Company Name <span class="req">*</span></label><input wire:model="customerForm.company" placeholder="e.g. Chardikala Limited"></div>
+                    <div class="form-group"><label>Director Name</label><input wire:model="customerForm.director" placeholder="e.g. Gurpinder Singh"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Contact Person <span class="req">*</span></label><input wire:model="customerForm.contact" placeholder="e.g. Gurpinder Singh"></div>
+                    <div class="form-group"><label>Cellphone / Contact Number <span class="req">*</span></label><input wire:model="customerForm.phone" placeholder="e.g. 027 510 0233"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Email Address</label><input type="email" wire:model="customerForm.email" placeholder="e.g. info@company.co.nz"></div>
+                    <div class="form-group"><label>Physical Address</label><input wire:model="customerForm.address" placeholder="e.g. 123 Main St, Auckland"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>NZBN (optional)</label><input wire:model="customerForm.nzbn" placeholder="9429..."></div>
+                    <div class="form-group"><label>Credit Rating</label><select wire:model="customerForm.credit_rating"><option>A+</option><option>A</option><option>B+</option><option>B</option><option>B-</option><option>C</option></select></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Payment Terms</label><select wire:model="customerForm.payment_terms"><option>Weekly</option><option>Fortnightly</option><option>Monthly</option><option>On Invoice</option><option>7 days</option></select></div>
+                    <div class="form-group"><label>Status</label><select wire:model="customerForm.status"><option value="prospect">Prospect</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="blacklisted">Blacklisted</option></select></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Weekly Truck Rate (NZD)</label><input type="number" wire:model="customerForm.weekly_truck"></div>
+                    <div class="form-group"><label>Weekly Trailer Rate (NZD)</label><input type="number" wire:model="customerForm.weekly_trailer"></div>
+                </div>
+                <div class="form-group"><label>Notes</label><textarea wire:model="customerForm.notes" rows="3" placeholder="Any relevant notes about this customer..."></textarea></div>
             @elseif($modal === 'hire')
-                <div class="form-row"><div class="form-group"><label>Customer</label><select wire:model="hireForm.customer"><option value="">Select</option>@foreach($customers as $c)<option value="{{ $c['id'] }}">{{ $c['company'] }}</option>@endforeach</select></div><div class="form-group"><label>Status</label><select wire:model="hireForm.status"><option value="active">Active</option><option value="completed">Completed</option><option value="draft">Draft</option></select></div></div>
-                <div class="form-row"><div class="form-group"><label>Truck</label><select wire:model="hireForm.truck"><option value="">Select</option>@foreach($trucks as $t)<option value="{{ $t['id'] }}">{{ $t['rego'] }}</option>@endforeach</select></div><div class="form-group"><label>Trailer</label><select wire:model="hireForm.trailer"><option value="">None</option>@foreach($trailers as $t)<option value="{{ $t['id'] }}">{{ $t['rego'] }}</option>@endforeach</select></div></div>
-                <div class="form-row"><div class="form-group"><label>Start</label><input type="date" wire:model="hireForm.start"></div><div class="form-group"><label>End</label><input type="date" wire:model="hireForm.end"></div></div>
-                <div class="form-row-3"><div class="form-group"><label>Weekly Truck</label><input wire:model="hireForm.weekly_truck"></div><div class="form-group"><label>Mileage Rate</label><input wire:model="hireForm.mileage_rate"></div><div class="form-group"><label>RUC Rate</label><input wire:model="hireForm.ruc_rate"></div></div>
-                <div class="form-group"><label>Notes</label><textarea wire:model="hireForm.notes"></textarea></div>
+                <div class="form-row mb-4"><div class="form-group"><label>Customer</label><select wire:model="hireForm.customer"><option value="">Select customer...</option>@foreach($customers as $c)<option value="{{ $c['id'] }}">{{ $c['company'] }}</option>@endforeach</select></div><div class="form-group"><label>Assign Truck</label><select wire:model="hireForm.truck"><option value="">Select truck...</option>@foreach($trucks as $t)<option value="{{ $t['id'] }}">{{ $t['rego'] }} - {{ $t['make'] }} {{ $t['model'] }}</option>@endforeach</select></div></div>
+                <div class="form-row mb-4"><div class="form-group"><label>Assign Trailer (optional)</label><select wire:model="hireForm.trailer"><option value="">No trailer</option>@foreach($trailers as $t)<option value="{{ $t['id'] }}">{{ $t['rego'] }} - {{ $t['make'] }} {{ $t['model'] }}</option>@endforeach</select></div><div class="form-group"><label>Hire Start Date</label><input type="date" wire:model="hireForm.start"></div></div>
+                <div class="form-row mb-4"><div class="form-group"><label>Hire End Date</label><input type="date" wire:model="hireForm.end"></div><div class="form-group"><label>Weekly Truck Rate (NZD)</label><input type="number" wire:model="hireForm.weekly_truck"></div></div>
+                <div class="form-row-3 mb-4"><div class="form-group"><label>Weekly Trailer Rate (NZD)</label><input type="number" wire:model="hireForm.weekly_trailer"></div><div class="form-group"><label>Mileage Rate ($/km)</label><input type="number" step="0.01" wire:model="hireForm.mileage_rate"></div><div class="form-group"><label>RUC Rate ($/km)</label><input type="number" step="0.001" wire:model="hireForm.ruc_rate"></div></div>
+                <div class="form-row mb-4"><div class="form-group"><label>Bond Amount (NZD)</label><input type="number" wire:model="hireForm.bond"></div><div class="form-group"><label>Status</label><select wire:model="hireForm.status"><option value="active">Active</option><option value="completed">Completed</option><option value="draft">Draft</option></select></div></div>
+                <div class="form-group mb-4"><label>Notes / Special Conditions</label><textarea wire:model="hireForm.notes" rows="3" placeholder="Enter any special hire conditions..."></textarea></div>
+                <div class="check-grid">
+                    <label><input type="checkbox" wire:model="hireForm.insurance_verified"> Insurance verified</label>
+                    <label><input type="checkbox" wire:model="hireForm.checklist_done"> Pre-handover checklist completed</label>
+                    <label><input type="checkbox" wire:model="hireForm.bond_paid"> Bond payment received</label>
+                    <label><input type="checkbox" wire:model="hireForm.signed"> Digital signature obtained</label>
+                </div>
             @elseif($modal === 'invoice')
-                <div class="form-row"><div class="form-group"><label>Customer</label><select wire:model="invoiceForm.customer"><option value="">Select</option>@foreach($customers as $c)<option value="{{ $c['id'] }}">{{ $c['company'] }}</option>@endforeach</select></div><div class="form-group"><label>Status</label><select wire:model="invoiceForm.status"><option value="draft">Draft</option><option value="sent">Sent</option><option value="overdue">Overdue</option><option value="paid">Paid</option></select></div></div>
-                <div class="form-row"><div class="form-group"><label>Date</label><input type="date" wire:model="invoiceForm.date"></div><div class="form-group"><label>Due</label><input type="date" wire:model="invoiceForm.due"></div></div>
-                <div class="form-group"><label>Period</label><input wire:model="invoiceForm.period"></div>
-                <div class="form-row-3"><div class="form-group"><label>Truck Hire</label><input wire:model="invoiceForm.truck_hire"></div><div class="form-group"><label>Mileage</label><input wire:model="invoiceForm.mileage"></div><div class="form-group"><label>RUC</label><input wire:model="invoiceForm.ruc"></div></div>
-                <div class="form-row"><div class="form-group"><label>Damage</label><input wire:model="invoiceForm.damage"></div><div class="form-group"><label>Extras</label><input wire:model="invoiceForm.extras"></div></div>
+                @php
+                    $selectedHire = $this->findById($hires, $invoiceForm['hire'] ?? null);
+                    $invoiceTruck = $selectedHire ? $this->findById($trucks, $selectedHire['truck'] ?? null) : null;
+                    $invoiceTrailer = $selectedHire ? $this->findById($trailers, $selectedHire['trailer'] ?? null) : null;
+                    $invoiceCustomer = $selectedHire ? $this->findById($customers, $selectedHire['customer'] ?? null) : null;
+                    $periodDays = $invoicePeriodFrom && $invoicePeriodTo ? max(1, \Illuminate\Support\Carbon::parse($invoicePeriodFrom)->diffInDays(\Illuminate\Support\Carbon::parse($invoicePeriodTo), false)) : 7;
+                    $periodKm = $invoiceTruck ? round((float) ($invoiceTruck['weekly_km'] ?? 0) * ($periodDays / 7)) : 0;
+                @endphp
+                <div class="wizard-steps">
+                    @foreach([[1,'Vehicle'],[2,'Period'],[3,'Review'],[4,'Done']] as [$n,$label])
+                        <div class="wizard-step {{ $invoiceStep >= $n ? 'active' : '' }} {{ $invoiceStep > $n ? 'done' : '' }}"><span>{{ $invoiceStep > $n ? '✓' : $n }}</span><small>{{ $label }}</small></div>
+                        @if($n < 4)<div class="wizard-line {{ $invoiceStep > $n ? 'active' : '' }}"></div>@endif
+                    @endforeach
+                </div>
+                @if($invoiceStep === 1)
+                    <div class="wizard-title">Select Vehicle & Invoice Type</div>
+                    <div class="form-group"><label>Vehicle on Hire</label><select wire:model.live="invoiceForm.hire"><option value="">-- Select vehicle --</option>@foreach($activeHires as $h)<option value="{{ $h['id'] }}">{{ $this->vehicleRego($h['truck']) }} - {{ $this->customerName($h['customer']) }}</option>@endforeach</select></div>
+                    @if($selectedHire && $invoiceCustomer)
+                        <div class="auto-panel mb-4">
+                            <div class="auto-panel-title">Auto-retrieved from hire record</div>
+                            <div class="auto-grid">
+                                <div><small>Customer</small><strong>{{ $invoiceCustomer['company'] }}</strong></div>
+                                <div><small>Contact</small><strong>{{ $invoiceCustomer['contact'] ?: '-' }}</strong></div>
+                                <div><small>Truck</small><strong>{{ $invoiceTruck ? $invoiceTruck['rego'].' '.$invoiceTruck['make'].' '.$invoiceTruck['model'] : '-' }}</strong></div>
+                                <div><small>Trailer</small><strong>{{ $invoiceTrailer['rego'] ?? 'None' }}</strong></div>
+                                <div><small>Weekly Rate</small><strong>{{ $this->money($selectedHire['weekly_truck'] ?? 0) }}</strong></div>
+                                <div><small>Navman KM/wk</small><strong>{{ number_format($invoiceTruck['weekly_km'] ?? 0) }} km</strong></div>
+                            </div>
+                        </div>
+                    @endif
+                    <div class="form-group"><label>Invoice Type</label><div class="invoice-type-grid">@foreach(['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly'] as $type => $label)<button type="button" class="{{ $invoiceType === $type ? 'active' : '' }}" wire:click="setInvoiceType('{{ $type }}')">{{ $label }}</button>@endforeach</div></div>
+                    <div class="wizard-actions end"><button type="button" class="btn btn-primary" wire:click="nextInvoiceStep" @disabled(blank($invoiceForm['hire'] ?? null))>Next: Set Period →</button></div>
+                @elseif($invoiceStep === 2)
+                    <div class="wizard-title">Set Invoice Period</div>
+                    <div class="form-row mb-4"><div class="form-group"><label>Period From</label><input type="date" wire:model="invoicePeriodFrom"></div><div class="form-group"><label>Period To</label><input type="date" wire:model="invoicePeriodTo"></div></div>
+                    <div class="auto-panel mb-4"><strong>Duration:</strong> {{ $periodDays }} days ({{ number_format($periodDays / 7, 1) }} weeks) &nbsp;·&nbsp; <strong>Navman KM:</strong> {{ number_format($periodKm) }} km estimated</div>
+                    <div class="wizard-actions"><button type="button" class="btn btn-ghost" wire:click="previousInvoiceStep">← Back</button><button type="button" class="btn btn-primary" wire:click="nextInvoiceStep">Next: Preview Invoice →</button></div>
+                @elseif($invoiceStep === 3)
+                    <div class="wizard-title">Review & Edit - {{ $invoiceForm['id'] ?: 'Draft Invoice' }}</div>
+                    <div class="form-row mb-4"><div class="summary-box"><small>Bill To</small><strong>{{ $this->customerName($invoiceForm['customer'] ?? null) }}</strong><span>{{ $this->vehicleRego($selectedHire['truck'] ?? null) }}{{ ($selectedHire['trailer'] ?? null) ? ' + '.$this->vehicleRego($selectedHire['trailer']) : '' }}</span></div><div class="summary-box"><small>Invoice Period</small><strong>{{ $invoiceForm['period'] ?: $invoicePeriodFrom.' to '.$invoicePeriodTo }}</strong><span>Due {{ $this->fmt($invoiceForm['due'] ?? null) }}</span></div></div>
+                    <div class="invoice-lines">
+                        <div class="invoice-lines-head"><span>Description</span><span>Amount</span></div>
+                        <label><span>Truck Hire</span><input type="number" wire:model.live="invoiceForm.truck_hire"></label>
+                        <label><span>Trailer Hire</span><input type="number" wire:model.live="invoiceForm.trailer_hire"></label>
+                        <label><span>Mileage</span><input type="number" wire:model.live="invoiceForm.mileage"></label>
+                        <label><span>RUC</span><input type="number" wire:model.live="invoiceForm.ruc"></label>
+                        <label><span>Damage</span><input type="number" wire:model.live="invoiceForm.damage"></label>
+                        <label><span>Extras</span><input type="number" wire:model.live="invoiceForm.extras"></label>
+                    </div>
+                    <div class="form-row mt-4"><div class="form-group"><label>Issue Date</label><input type="date" wire:model="invoiceForm.date"></div><div class="form-group"><label>Due Date</label><input type="date" wire:model="invoiceForm.due"></div></div>
+                    <div class="form-group"><label>Status</label><select wire:model="invoiceForm.status"><option value="draft">Draft</option><option value="sent">Sent</option><option value="overdue">Overdue</option><option value="paid">Paid</option></select></div>
+                @elseif($invoiceStep === 4)
+                    <div class="done-state"><div class="done-mark">✓</div><h3>Invoice saved</h3><p>{{ $invoiceForm['id'] }} has been saved to the database.</p><button type="button" class="btn btn-primary" wire:click="closeModal">Done</button></div>
+                @endif
             @elseif($modal === 'navman')
                 <div class="form-row-3"><div class="form-group"><label>Weekly KM</label><input wire:model="navmanForm.weekly_km"></div><div class="form-group"><label>RUC Balance</label><input wire:model="navmanForm.ruc_balance"></div><div class="form-group"><label>Odometer</label><input wire:model="navmanForm.odometer"></div></div>
             @endif
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn btn-ghost" wire:click="closeModal">{{ $isKpi ? 'Close' : 'Cancel' }}</button>
-            @if($isKpi)
-            @elseif($modal === 'vehicle')<button type="button" class="btn btn-primary" wire:click="saveVehicle">Save Vehicle</button>
-            @elseif($modal === 'customer')<button type="button" class="btn btn-primary" wire:click="saveCustomer">Save Customer</button>
-            @elseif($modal === 'hire')<button type="button" class="btn btn-primary" wire:click="saveHire">Save Hire</button>
-            @elseif($modal === 'invoice')<button type="button" class="btn btn-primary" wire:click="saveInvoice">Save Invoice</button>
-            @elseif($modal === 'navman')<button type="button" class="btn btn-primary" wire:click="saveNavman">Save Navman</button>@endif
+            @if($modal === 'invoice' && in_array($invoiceStep, [1, 2, 4]))
+            @else
+                <button type="button" class="btn btn-ghost" wire:click="closeModal">{{ $isKpi ? 'Close' : 'Cancel' }}</button>
+                @if($isKpi)
+                @elseif($modal === 'vehicle')<button type="button" class="btn btn-primary" wire:click="saveVehicle">✓ {{ $selectedId ? 'Save Vehicle' : 'Add Vehicle' }}</button>
+                @elseif($modal === 'customer')<button type="button" class="btn btn-primary" wire:click="saveCustomer">✓ {{ $selectedId ? 'Save Changes' : 'Add Customer' }}</button>
+                @elseif($modal === 'hire')<button type="button" class="btn btn-primary" wire:click="saveHire">✓ {{ $selectedId ? 'Save Hire Agreement' : 'Create Hire Agreement' }}</button>
+                @elseif($modal === 'invoice')<button type="button" class="btn btn-primary" wire:click="saveInvoice">✓ Save Invoice</button>
+                @elseif($modal === 'navman')<button type="button" class="btn btn-primary" wire:click="saveNavman">✓ Save Navman</button>@endif
+            @endif
         </div>
     </div>
 </div>

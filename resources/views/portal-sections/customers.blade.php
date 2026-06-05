@@ -48,7 +48,7 @@
                     @endphp
                     <tr>
                         <td class="fw-700">{{ $c['company'] }}</td>
-                        <td class="text-muted">—</td>
+                        <td class="text-muted">{{ $c['director'] ?? '—' }}</td>
                         <td>{{ $c['contact'] ?: '—' }}</td>
                         <td>{{ $c['phone'] ?: '—' }}</td>
                         <td>{{ $activeHire ? $this->vehicleRego($activeHire['truck'] ?? null) : '—' }}</td>
