@@ -1,25 +1,769 @@
 <?php
 
+use App\Models\AppSetting;
+use App\Models\Customer;
+use App\Models\Hire;
+use App\Models\Invoice;
+use App\Models\MaintenanceRecord;
+use App\Models\MonthlyRevenue;
+use App\Models\PnlDetail;
+use App\Models\PortalDocument;
+use App\Models\Vehicle;
+use App\Models\WeeklyRevenue;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Arr;
 use Livewire\Component;
 
 new class extends Component
 {
-    public string $content = 'asdasdasdasd';
+    public string $page = 'dashboard';
+    public string $theme = 'light';
+    public string $search = '';
+    public string $fleetTab = 'trucks';
+    public string $customerStatus = 'all';
+    public string $hireTab = 'hires';
+    public string $invoiceTab = 'all';
+    public string $reportTab = 'pl';
+    public string $maintenanceTab = 'log';
+    public string $documentTab = 'library';
+    public ?string $modal = null;
+    public ?string $selectedId = null;
+    public string $toast = '';
+
+    public array $trucks = [];
+    public array $trailers = [];
+    public array $customers = [];
+    public array $hires = [];
+    public array $invoices = [];
+    public array $maintenance = [];
+    public array $documents = [];
+    public array $weekly_revenue = [];
+    public array $monthly_revenue = [];
+    public array $pnl_detail = [];
+
+    public array $vehicleForm = [];
+    public array $customerForm = [];
+    public array $hireForm = [];
+    public array $invoiceForm = [];
+    public array $navmanForm = [];
+    public array $settingsForm = [
+        'company' => 'SS Rentals Ltd',
+        'gst' => '123-456-789',
+        'address' => 'Auckland, New Zealand',
+        'ruc_rate' => '0.062',
+        'invoice_prefix' => 'INV-2026-',
+        'payment_terms' => '7',
+        'gst_rate' => '15',
+    ];
+
+    public function mount(): void
+    {
+        $data = $this->loadPortalData();
+
+        foreach ($data as $key => $value) {
+            $this->{$key} = $value;
+        }
+
+        $this->resetForms();
+    }
+
+    public function setPage(string $page): void
+    {
+        $this->page = $page;
+        $this->search = '';
+        $this->modal = null;
+    }
+
+    public function toggleTheme(): void
+    {
+        $this->theme = $this->theme === 'light' ? 'dark' : 'light';
+    }
+
+    public function openModal(string $modal, ?string $id = null): void
+    {
+        $this->modal = $modal;
+        $this->selectedId = $id;
+
+        if ($modal === 'vehicle') {
+            $vehicle = $id ? $this->findVehicle($id) : null;
+            $this->vehicleForm = $vehicle ? array_merge($this->emptyVehicle(), $vehicle) : $this->emptyVehicle();
+            $this->vehicleForm['asset_type'] = $vehicle && str_starts_with($vehicle['id'], 'TR') ? 'trailer' : 'truck';
+        }
+
+        if ($modal === 'customer') {
+            $customer = $id ? $this->findById($this->customers, $id) : null;
+            $this->customerForm = $customer ? array_merge($this->emptyCustomer(), $customer) : $this->emptyCustomer();
+        }
+
+        if ($modal === 'hire') {
+            $hire = $id ? $this->findById($this->hires, $id) : null;
+            $this->hireForm = $hire ? array_merge($this->emptyHire(), $hire) : $this->emptyHire();
+        }
+
+        if ($modal === 'invoice') {
+            $invoice = $id ? $this->findById($this->invoices, $id) : null;
+            $this->invoiceForm = $invoice ? array_merge($this->emptyInvoice(), $invoice) : $this->emptyInvoice();
+        }
+
+        if ($modal === 'navman') {
+            $truck = $id ? $this->findById($this->trucks, $id) : null;
+            $this->navmanForm = [
+                'id' => $truck['id'] ?? '',
+                'rego' => $truck['rego'] ?? '',
+                'weekly_km' => $truck['weekly_km'] ?? 0,
+                'ruc_balance' => $truck['ruc_balance'] ?? 0,
+                'odometer' => $truck['odometer'] ?? 0,
+            ];
+        }
+    }
+
+    public function closeModal(): void
+    {
+        $this->modal = null;
+        $this->selectedId = null;
+    }
+
+    public function saveVehicle(): void
+    {
+        $form = $this->vehicleForm;
+        $isTrailer = ($form['asset_type'] ?? 'truck') === 'trailer';
+        $target = $isTrailer ? 'trailers' : 'trucks';
+
+        if (blank($form['id'])) {
+            $form['id'] = $isTrailer ? 'TR'.str_pad((string) (count($this->trailers) + 1), 3, '0', STR_PAD_LEFT) : 'T'.str_pad((string) (count($this->trucks) + 1), 3, '0', STR_PAD_LEFT);
+        }
+
+        unset($form['asset_type']);
+        $this->{$target} = $this->upsert($this->{$target}, $form);
+        $this->persist($target);
+        $this->flash('Vehicle saved');
+        $this->closeModal();
+    }
+
+    public function saveCustomer(): void
+    {
+        $form = $this->customerForm;
+        if (blank($form['id'])) {
+            $form['id'] = 'C'.str_pad((string) (count($this->customers) + 1), 3, '0', STR_PAD_LEFT);
+        }
+
+        $this->customers = $this->upsert($this->customers, $form);
+        $this->persist('customers');
+        $this->flash('Customer saved');
+        $this->closeModal();
+    }
+
+    public function saveHire(): void
+    {
+        $form = $this->hireForm;
+        if (blank($form['id'])) {
+            $form['id'] = 'H'.str_pad((string) (count($this->hires) + 1), 3, '0', STR_PAD_LEFT);
+        }
+
+        $form['weekly_truck'] = (float) ($form['weekly_truck'] ?? 0);
+        $form['weekly_trailer'] = (float) ($form['weekly_trailer'] ?? 0);
+        $form['mileage_rate'] = (float) ($form['mileage_rate'] ?? 0);
+        $form['ruc_rate'] = (float) ($form['ruc_rate'] ?? 0);
+        $form['bond'] = (float) ($form['bond'] ?? 0);
+
+        $this->hires = $this->upsert($this->hires, $form);
+        $this->syncHireToFleet($form);
+        $this->persist('hires');
+        $this->persist('trucks');
+        $this->persist('trailers');
+        $this->flash('Hire agreement saved');
+        $this->closeModal();
+    }
+
+    public function saveInvoice(): void
+    {
+        $form = $this->invoiceForm;
+        if (blank($form['id'])) {
+            $next = 270 + count($this->invoices);
+            $form['id'] = 'INV-'.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+        }
+
+        $form['truck_hire'] = (float) ($form['truck_hire'] ?? 0);
+        $form['trailer_hire'] = (float) ($form['trailer_hire'] ?? 0);
+        $form['mileage'] = (float) ($form['mileage'] ?? 0);
+        $form['ruc'] = (float) ($form['ruc'] ?? 0);
+        $form['damage'] = (float) ($form['damage'] ?? 0);
+        $form['extras'] = (float) ($form['extras'] ?? 0);
+        $form['total'] = $form['truck_hire'] + $form['trailer_hire'] + $form['mileage'] + $form['ruc'] + $form['damage'] + $form['extras'];
+
+        $this->invoices = $this->upsert($this->invoices, $form);
+        $this->persist('invoices');
+        $this->flash('Invoice saved');
+        $this->closeModal();
+    }
+
+    public function generateInvoiceFromHire(string $hireId): void
+    {
+        $hire = $this->findById($this->hires, $hireId);
+        if (! $hire) {
+            return;
+        }
+
+        $truck = $this->findById($this->trucks, $hire['truck']);
+        $km = (float) ($truck['weekly_km'] ?? 0);
+        $this->invoiceForm = array_merge($this->emptyInvoice(), [
+            'id' => 'INV-'.str_pad((string) (270 + count($this->invoices)), 4, '0', STR_PAD_LEFT),
+            'customer' => $hire['customer'],
+            'hire' => $hire['id'],
+            'date' => now()->toDateString(),
+            'due' => now()->addDays(7)->toDateString(),
+            'period' => $this->fmt($hire['start']).' - '.$this->fmt($hire['end']),
+            'truck_hire' => (float) ($hire['weekly_truck'] ?? 0),
+            'trailer_hire' => (float) ($hire['weekly_trailer'] ?? 0),
+            'mileage' => $km * (float) ($hire['mileage_rate'] ?? 0),
+            'ruc' => $km * (float) ($hire['ruc_rate'] ?? 0),
+            'status' => 'draft',
+        ]);
+        $this->modal = 'invoice';
+    }
+
+    public function saveNavman(): void
+    {
+        foreach ($this->trucks as $i => $truck) {
+            if ($truck['id'] === $this->navmanForm['id']) {
+                $this->trucks[$i]['weekly_km'] = (float) $this->navmanForm['weekly_km'];
+                $this->trucks[$i]['ruc_balance'] = (float) $this->navmanForm['ruc_balance'];
+                $this->trucks[$i]['odometer'] = (float) $this->navmanForm['odometer'];
+            }
+        }
+
+        $this->flash('Navman values updated');
+        $this->persist('trucks');
+        $this->closeModal();
+    }
+
+    public function saveSettings(): void
+    {
+        $this->persist('settingsForm', 'settings');
+        $this->flash('Settings saved');
+    }
+
+    public function markPaid(string $invoiceId): void
+    {
+        foreach ($this->invoices as $i => $invoice) {
+            if ($invoice['id'] === $invoiceId) {
+                $this->invoices[$i]['status'] = 'paid';
+            }
+        }
+
+        $this->flash('Invoice marked paid');
+        $this->persist('invoices');
+    }
+
+    private function loadPortalData(): array
+    {
+        $defaults = json_decode(file_get_contents(resource_path('data/portal-data.json')), true);
+        $defaults['settingsForm'] = $this->settingsForm;
+
+        if (! Schema::hasTable('vehicles')) {
+            return $defaults;
+        }
+
+        if (Vehicle::query()->doesntExist()) {
+            return $defaults;
+        }
+
+        $defaults['trucks'] = Vehicle::query()->where('asset_type', 'truck')->orderBy('id')->get()->map(fn (Vehicle $vehicle) => $this->vehicleArray($vehicle))->all();
+        $defaults['trailers'] = Vehicle::query()->where('asset_type', 'trailer')->orderBy('id')->get()->map(fn (Vehicle $vehicle) => $this->vehicleArray($vehicle))->all();
+        $defaults['customers'] = Customer::query()->orderBy('id')->get()->map(fn (Customer $customer) => $this->customerArray($customer))->all();
+        $defaults['hires'] = Hire::query()->orderBy('id')->get()->map(fn (Hire $hire) => $this->hireArray($hire))->all();
+        $defaults['invoices'] = Invoice::query()->orderByDesc('date')->orderByDesc('id')->get()->map(fn (Invoice $invoice) => $this->invoiceArray($invoice))->all();
+        $defaults['maintenance'] = MaintenanceRecord::query()->orderByDesc('date')->get()->map(fn (MaintenanceRecord $record) => $this->maintenanceArray($record))->all();
+        $defaults['documents'] = PortalDocument::query()->orderByDesc('date')->get()->map(fn (PortalDocument $document) => $this->documentArray($document))->all();
+        $defaults['weekly_revenue'] = WeeklyRevenue::query()->orderBy('id')->get()->map(fn (WeeklyRevenue $row) => $this->clean($row->toArray()))->all();
+        $defaults['monthly_revenue'] = MonthlyRevenue::query()->orderBy('id')->get()->map(fn (MonthlyRevenue $row) => $this->clean($row->toArray()))->all();
+        $defaults['pnl_detail'] = PnlDetail::query()->orderBy('month')->get()->map(fn (PnlDetail $row) => $this->clean($row->toArray()))->all();
+
+        $settings = AppSetting::query()->find('portal');
+        $defaults['settingsForm'] = array_merge($this->settingsForm, $settings?->payload ?: []);
+
+        return $defaults;
+    }
+
+    private function persist(string $property, ?string $key = null): void
+    {
+        if (! Schema::hasTable('vehicles')) {
+            return;
+        }
+
+        match ($key ?? $property) {
+            'trucks' => $this->persistVehicles($this->trucks, 'truck'),
+            'trailers' => $this->persistVehicles($this->trailers, 'trailer'),
+            'customers' => collect($this->customers)->each(fn ($row) => Customer::query()->updateOrCreate(['id' => $row['id']], $this->customerRecord($row))),
+            'hires' => collect($this->hires)->each(fn ($row) => Hire::query()->updateOrCreate(['id' => $row['id']], $this->hireRecord($row))),
+            'invoices' => collect($this->invoices)->each(fn ($row) => Invoice::query()->updateOrCreate(['id' => $row['id']], $this->invoiceRecord($row))),
+            'settings' => AppSetting::query()->updateOrCreate(['key' => 'portal'], ['payload' => $this->settingsForm]),
+            default => null,
+        };
+    }
+
+    private function persistVehicles(array $vehicles, string $assetType): void
+    {
+        foreach ($vehicles as $row) {
+            Vehicle::query()->updateOrCreate(
+                ['id' => $row['id']],
+                $this->vehicleRecord($row, $assetType),
+            );
+        }
+    }
+
+    private function vehicleArray(Vehicle $vehicle): array
+    {
+        $row = $this->clean($vehicle->toArray());
+        $row['hirer'] = $row['hirer_id'] ?? null;
+        unset($row['asset_type'], $row['hirer_id']);
+
+        return $row;
+    }
+
+    private function customerArray(Customer $customer): array
+    {
+        $row = $this->clean($customer->toArray());
+        $row['truck'] = $row['truck_id'] ?? null;
+        $row['trailer'] = $row['trailer_id'] ?? null;
+        unset($row['truck_id'], $row['trailer_id']);
+
+        return $row;
+    }
+
+    private function hireArray(Hire $hire): array
+    {
+        $row = $this->clean($hire->toArray());
+        $row['customer'] = $row['customer_id'] ?? null;
+        $row['truck'] = $row['truck_id'] ?? null;
+        $row['trailer'] = $row['trailer_id'] ?? null;
+        unset($row['customer_id'], $row['truck_id'], $row['trailer_id']);
+
+        return $row;
+    }
+
+    private function invoiceArray(Invoice $invoice): array
+    {
+        $row = $this->clean($invoice->toArray());
+        $row['customer'] = $row['customer_id'] ?? null;
+        $row['hire'] = $row['hire_id'] ?? null;
+        unset($row['customer_id'], $row['hire_id']);
+
+        return $row;
+    }
+
+    private function maintenanceArray(MaintenanceRecord $record): array
+    {
+        $row = $this->clean($record->toArray());
+        $row['vehicle'] = $row['vehicle_id'] ?? null;
+        unset($row['vehicle_id']);
+
+        return $row;
+    }
+
+    private function documentArray(PortalDocument $document): array
+    {
+        $row = $this->clean($document->toArray());
+        $row['customer'] = $row['customer_id'] ?? null;
+        $row['vehicle'] = $row['vehicle_id'] ?? null;
+        unset($row['customer_id'], $row['vehicle_id']);
+
+        return $row;
+    }
+
+    private function vehicleRecord(array $row, string $assetType): array
+    {
+        return array_merge(
+            ['asset_type' => $assetType, 'hirer_id' => $row['hirer'] ?? null],
+            Arr::only($row, [
+                'rego', 'make', 'model', 'year', 'type', 'status', 'odometer', 'value', 'cof_expiry', 'rego_expiry',
+                'service_due_km', 'next_service', 'insurance_expiry', 'ruc_balance', 'hire_start', 'weekly_rate',
+                'location', 'weekly_km', 'rev_ytd', 'maint_ytd', 'downtime', 'instalment', 'note',
+            ]),
+        );
+    }
+
+    private function customerRecord(array $row): array
+    {
+        return array_merge(
+            ['truck_id' => $row['truck'] ?? null, 'trailer_id' => $row['trailer'] ?? null],
+            Arr::only($row, [
+                'company', 'contact', 'phone', 'email', 'address', 'nzbn', 'status', 'weekly_truck', 'weekly_trailer',
+                'mileage_rate', 'ruc_rate', 'outstanding', 'payment_terms', 'joined', 'ytd_revenue', 'credit_rating', 'notes',
+            ]),
+        );
+    }
+
+    private function hireRecord(array $row): array
+    {
+        return array_merge(
+            ['customer_id' => $row['customer'] ?? null, 'truck_id' => $row['truck'] ?? null, 'trailer_id' => $row['trailer'] ?: null],
+            Arr::only($row, [
+                'start', 'end', 'status', 'weekly_truck', 'weekly_trailer', 'mileage_rate', 'ruc_rate', 'bond', 'bond_paid',
+                'invoiced_to', 'next_invoice', 'signed', 'insurance_verified', 'checklist_done', 'notes',
+            ]),
+        );
+    }
+
+    private function invoiceRecord(array $row): array
+    {
+        return array_merge(
+            ['customer_id' => $row['customer'] ?: null, 'hire_id' => $row['hire'] ?: null],
+            Arr::only($row, [
+                'date', 'due', 'period', 'truck_hire', 'trailer_hire', 'mileage', 'ruc', 'damage', 'extras', 'total', 'status', 'xero_id',
+            ]),
+        );
+    }
+
+    private function clean(array $row): array
+    {
+        return Arr::except($row, ['created_at', 'updated_at']);
+    }
+
+    private function resetForms(): void
+    {
+        $this->vehicleForm = $this->emptyVehicle();
+        $this->customerForm = $this->emptyCustomer();
+        $this->hireForm = $this->emptyHire();
+        $this->invoiceForm = $this->emptyInvoice();
+    }
+
+    private function emptyVehicle(): array
+    {
+        return [
+            'asset_type' => 'truck', 'id' => '', 'rego' => '', 'make' => '', 'model' => '', 'year' => date('Y'),
+            'type' => '', 'status' => 'available', 'odometer' => 0, 'value' => 0, 'cof_expiry' => now()->addMonths(6)->toDateString(),
+            'rego_expiry' => now()->addMonths(6)->toDateString(), 'service_due_km' => 0, 'next_service' => now()->addMonth()->toDateString(),
+            'insurance_expiry' => now()->addYear()->toDateString(), 'ruc_balance' => 0, 'hirer' => null, 'hire_start' => null,
+            'weekly_rate' => 0, 'location' => 'Auckland - Yard', 'weekly_km' => 0, 'rev_ytd' => 0, 'maint_ytd' => 0,
+            'downtime' => 0, 'instalment' => 0, 'note' => '',
+        ];
+    }
+
+    private function emptyCustomer(): array
+    {
+        return [
+            'id' => '', 'company' => '', 'contact' => '', 'phone' => '', 'email' => '', 'address' => 'Auckland, NZ',
+            'nzbn' => '', 'status' => 'active', 'truck' => null, 'trailer' => null, 'weekly_truck' => 0, 'weekly_trailer' => 0,
+            'mileage_rate' => 0.25, 'ruc_rate' => 0.62, 'outstanding' => 0, 'payment_terms' => '7 days',
+            'joined' => now()->toDateString(), 'ytd_revenue' => 0, 'credit_rating' => 'B+', 'notes' => '',
+        ];
+    }
+
+    private function emptyHire(): array
+    {
+        return [
+            'id' => '', 'customer' => '', 'truck' => '', 'trailer' => null, 'start' => now()->toDateString(),
+            'end' => now()->addWeek()->toDateString(), 'status' => 'active', 'weekly_truck' => 0, 'weekly_trailer' => 0,
+            'mileage_rate' => 0.25, 'ruc_rate' => 0.62, 'bond' => 0, 'bond_paid' => false, 'invoiced_to' => null,
+            'next_invoice' => now()->addWeek()->toDateString(), 'signed' => false, 'insurance_verified' => false,
+            'checklist_done' => false, 'notes' => '',
+        ];
+    }
+
+    private function emptyInvoice(): array
+    {
+        return [
+            'id' => '', 'customer' => '', 'hire' => '', 'date' => now()->toDateString(), 'due' => now()->addDays(7)->toDateString(),
+            'period' => '', 'truck_hire' => 0, 'trailer_hire' => 0, 'mileage' => 0, 'ruc' => 0, 'damage' => 0,
+            'extras' => 0, 'total' => 0, 'status' => 'draft', 'xero_id' => null,
+        ];
+    }
+
+    private function upsert(array $items, array $item): array
+    {
+        foreach ($items as $i => $existing) {
+            if (($existing['id'] ?? null) === ($item['id'] ?? null)) {
+                $items[$i] = array_merge($existing, $item);
+                return $items;
+            }
+        }
+
+        array_unshift($items, $item);
+        return $items;
+    }
+
+    private function syncHireToFleet(array $hire): void
+    {
+        foreach ($this->trucks as $i => $truck) {
+            if ($truck['id'] === ($hire['truck'] ?? null)) {
+                $this->trucks[$i]['status'] = $hire['status'] === 'active' ? 'on_hire' : 'available';
+                $this->trucks[$i]['hirer'] = $hire['status'] === 'active' ? $hire['customer'] : null;
+                $this->trucks[$i]['weekly_rate'] = (float) ($hire['weekly_truck'] ?? 0);
+            }
+        }
+
+        foreach ($this->trailers as $i => $trailer) {
+            if (($hire['trailer'] ?? null) && $trailer['id'] === $hire['trailer']) {
+                $this->trailers[$i]['status'] = $hire['status'] === 'active' ? 'on_hire' : 'available';
+                $this->trailers[$i]['hirer'] = $hire['status'] === 'active' ? $hire['customer'] : null;
+            }
+        }
+    }
+
+    private function flash(string $message): void
+    {
+        $this->toast = $message;
+    }
+
+    public function filteredTrucks(): array
+    {
+        return $this->filterRows($this->trucks, ['rego', 'make', 'model', 'type', 'location']);
+    }
+
+    public function filteredTrailers(): array
+    {
+        return $this->filterRows($this->trailers, ['rego', 'make', 'model', 'location']);
+    }
+
+    public function filteredCustomers(): array
+    {
+        $rows = $this->filterRows($this->customers, ['company', 'contact', 'phone', 'email', 'notes']);
+
+        if ($this->customerStatus !== 'all') {
+            $rows = array_values(array_filter($rows, fn ($row) => ($row['status'] ?? '') === $this->customerStatus));
+        }
+
+        return $rows;
+    }
+
+    public function filteredHires(): array
+    {
+        $rows = $this->filterRows($this->hires, ['id', 'notes']);
+
+        if ($this->hireTab === 'active') {
+            $rows = array_values(array_filter($rows, fn ($row) => ($row['status'] ?? '') === 'active'));
+        } elseif ($this->hireTab === 'completed') {
+            $rows = array_values(array_filter($rows, fn ($row) => ($row['status'] ?? '') === 'completed'));
+        } elseif ($this->hireTab === 'quotes') {
+            return [];
+        }
+
+        return $rows;
+    }
+
+    public function filteredInvoices(): array
+    {
+        $rows = $this->filterRows($this->invoices, ['id', 'period', 'status']);
+
+        if ($this->invoiceTab !== 'all') {
+            $rows = array_values(array_filter($rows, fn ($row) => ($row['status'] ?? '') === $this->invoiceTab));
+        }
+
+        return $rows;
+    }
+
+    private function filterRows(array $rows, array $fields): array
+    {
+        $search = mb_strtolower(trim($this->search));
+        if ($search === '') {
+            return $rows;
+        }
+
+        return array_values(array_filter($rows, function ($row) use ($fields, $search) {
+            foreach ($fields as $field) {
+                if (str_contains(mb_strtolower((string) ($row[$field] ?? '')), $search)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }));
+    }
+
+    public function allVehicles(): array
+    {
+        return array_merge($this->trucks, $this->trailers);
+    }
+
+    public function activeHires(): array
+    {
+        return array_values(array_filter($this->hires, fn ($hire) => ($hire['status'] ?? '') === 'active'));
+    }
+
+    public function findById(array $items, ?string $id): ?array
+    {
+        foreach ($items as $item) {
+            if (($item['id'] ?? null) === $id) {
+                return $item;
+            }
+        }
+
+        return null;
+    }
+
+    public function findVehicle(?string $id): ?array
+    {
+        return $this->findById($this->trucks, $id) ?: $this->findById($this->trailers, $id);
+    }
+
+    public function customerName(?string $id): string
+    {
+        return $this->findById($this->customers, $id)['company'] ?? ($id ?: '-');
+    }
+
+    public function vehicleRego(?string $id): string
+    {
+        return $this->findVehicle($id)['rego'] ?? ($id ?: '-');
+    }
+
+    public function fmt(?string $date): string
+    {
+        return $date ? date('d M Y', strtotime($date)) : '-';
+    }
+
+    public function money(mixed $value): string
+    {
+        return '$'.number_format((float) $value, 2);
+    }
+
+    public function daysDiff(?string $date): int
+    {
+        return $date ? now()->startOfDay()->diffInDays(\Illuminate\Support\Carbon::parse($date)->startOfDay(), false) : 0;
+    }
+
+    public function statusLabel(?string $status): string
+    {
+        return [
+            'on_hire' => 'On Hire',
+            'in_progress' => 'In Progress',
+        ][$status] ?? ucwords(str_replace('_', ' ', (string) $status));
+    }
+
+    public function statusClass(?string $status): string
+    {
+        $map = [
+            'on_hire' => 'blue', 'available' => 'green', 'maintenance' => 'orange', 'active' => 'green',
+            'overdue' => 'red', 'paid' => 'green', 'sent' => 'blue', 'draft' => 'gray', 'completed' => 'green',
+            'scheduled' => 'blue', 'blacklisted' => 'red', 'inactive' => 'gray', 'prospect' => 'orange',
+        ];
+
+        return 'badge badge-'.($map[$status] ?? 'gray');
+    }
+
+    public function summary(): array
+    {
+        $onHire = count(array_filter($this->trucks, fn ($t) => ($t['status'] ?? '') === 'on_hire'));
+        $available = count(array_filter($this->trucks, fn ($t) => ($t['status'] ?? '') === 'available'));
+        $util = count($this->trucks) ? round(($onHire / count($this->trucks)) * 100) : 0;
+        $weekRev = (float) (end($this->weekly_revenue)['amount'] ?? 0);
+        $month = end($this->monthly_revenue) ?: ['amount' => 0, 'net' => 0];
+        $outstanding = array_sum(array_map(fn ($i) => ($i['status'] ?? '') !== 'paid' ? (float) ($i['total'] ?? 0) : 0, $this->invoices));
+        $overdue = array_values(array_filter($this->invoices, fn ($i) => ($i['status'] ?? '') === 'overdue'));
+        $weeklyKm = array_sum(array_map(fn ($t) => (float) ($t['weekly_km'] ?? 0), $this->trucks));
+
+        return compact('onHire', 'available', 'util', 'weekRev', 'month', 'outstanding', 'overdue', 'weeklyKm');
+    }
 };
 ?>
 
-<section class="portal-panel">
-    <header class="portal-header">
-        <div>
-            <p class="portal-kicker">Portal</p>
-            <h1>SS Rentals Portal</h1>
+<div class="app" wire:key="portal-app">
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="logo-mark">
+                <img src="{{ asset('images/logo.png') }}" alt="SS Rentals" style="width:55px;height:55px;border-radius:8px;object-fit:contain;background:#fff;padding:2px;flex-shrink:0">
+                <div>
+                    <div class="logo-text" style="color:#1a0533">SS Rentals</div>
+                    <div class="logo-sub" style="color:#9b7ab5">Fleet Platform</div>
+                </div>
+            </div>
         </div>
 
-        <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <button type="submit" class="secondary-button">Logout</button>
-        </form>
-    </header>
+        @php
+            $nav = [
+                'main' => [['dashboard','Dashboard','dashboard'],['fleet','Fleet','fleet'],['customers','Customers','customers'],['hires','Hire Management','hires']],
+                'finance' => [['invoicing','Invoicing','invoice'],['reports','Financial Reports','reports']],
+                'operations' => [['maintenance','Maintenance','maintenance'],['navman','Navman GPS','navman'],['documents','Documents','documents']],
+                'system' => [['settings','Settings','settings']],
+            ];
+            $s = $this->summary();
+            $badges = [
+                'fleet' => count(array_filter($this->allVehicles(), fn($v) => $this->daysDiff($v['cof_expiry'] ?? null) <= 30 || $this->daysDiff($v['rego_expiry'] ?? null) <= 30)),
+                'hires' => count(array_filter($this->activeHires(), fn($h) => $this->daysDiff($h['end'] ?? null) <= 7 && $this->daysDiff($h['end'] ?? null) >= 0)),
+                'invoicing' => count($s['overdue']),
+                'maintenance' => count(array_filter($maintenance, fn($m) => ($m['status'] ?? '') === 'scheduled' && $this->daysDiff($m['date'] ?? null) <= 30)),
+            ];
+        @endphp
 
-    <p class="portal-content">{{ $content }}</p>
-</section>
+        @foreach($nav as $section => $items)
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">{{ $section }}</div>
+                @foreach($items as [$id, $label, $icon])
+                    <button type="button" class="nav-item {{ $page === $id ? 'active' : '' }}" wire:click="setPage('{{ $id }}')">
+                        <span class="nav-icon">{{ strtoupper(substr($label, 0, 1)) }}</span>
+                        <span>{{ $label }}</span>
+                        @if(($badges[$id] ?? 0) > 0)
+                            <span class="nav-badge">{{ $badges[$id] }}</span>
+                        @endif
+                    </button>
+                @endforeach
+            </div>
+        @endforeach
+
+        <div class="sidebar-footer">
+            <div style="display:flex;align-items:center;gap:10px;padding:0 8px">
+                <div class="avatar">SD</div>
+                <div style="flex:1;min-width:0">
+                    <div style="font-size:13px;font-weight:600;color:#6A1B9A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Sukhdeep Singh</div>
+                    <div style="font-size:11px;color:var(--text3)">Director / Admin</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div class="main">
+        <header class="header">
+            <div style="flex:1">
+                <div class="header-title">{{ [
+                    'dashboard' => 'Dashboard', 'fleet' => 'Fleet Management', 'customers' => 'Customers', 'hires' => 'Hire Management',
+                    'invoicing' => 'Invoicing', 'reports' => 'Financial Reports', 'maintenance' => 'Maintenance', 'navman' => 'Navman GPS',
+                    'documents' => 'Documents', 'settings' => 'Settings'
+                ][$page] ?? 'Dashboard' }}</div>
+                <div class="header-sub">{{ now()->format('l, d F Y') }}</div>
+            </div>
+            <div class="header-actions">
+                @if($toast)
+                    <span class="badge badge-green">{{ $toast }}</span>
+                @endif
+                <button type="button" class="btn btn-ghost btn-sm" wire:click="openModal('hire')">+ New Hire</button>
+                <button type="button" class="icon-btn" wire:click="toggleTheme" title="Toggle theme">{{ $theme === 'light' ? '◐' : '☀' }}</button>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="icon-btn" title="Logout">↪</button>
+                </form>
+            </div>
+        </header>
+
+        <main class="content">
+            @if(in_array($page, ['fleet','customers','hires','invoicing','documents']))
+                <div class="card card-sm mb-4">
+                    <input type="search" wire:model.live.debounce.250ms="search" placeholder="Search {{ $page }}...">
+                </div>
+            @endif
+
+            @if($page === 'dashboard')
+                @include('portal-sections.dashboard', ['s' => $s])
+            @elseif($page === 'fleet')
+                @include('portal-sections.fleet')
+            @elseif($page === 'customers')
+                @include('portal-sections.customers')
+            @elseif($page === 'hires')
+                @include('portal-sections.hires')
+            @elseif($page === 'invoicing')
+                @include('portal-sections.invoicing')
+            @elseif($page === 'reports')
+                @include('portal-sections.reports')
+            @elseif($page === 'maintenance')
+                @include('portal-sections.maintenance')
+            @elseif($page === 'navman')
+                @include('portal-sections.navman')
+            @elseif($page === 'documents')
+                @include('portal-sections.documents')
+            @elseif($page === 'settings')
+                @include('portal-sections.settings')
+            @endif
+        </main>
+    </div>
+
+    @include('portal-sections.modals')
+</div>
