@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Http\Request;
+use App\Http\Controllers\XeroController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -8,9 +9,30 @@ Route::get('/', function () {
     return view('login');
 })->middleware('guest')->name('login');
 
-Route::get('/portal', function () {
-    return view('portal');
-})->middleware('auth')->name('portal');
+$portalSections = [
+    'dashboard' => 'dashboard',
+    'dashabord' => 'dashboard',
+    'portal' => 'dashboard',
+    'fleet' => 'fleet',
+    'fleets' => 'fleet',
+    'customers' => 'customers',
+    'hires' => 'hires',
+    'hire-management' => 'hires',
+    'invoice' => 'invoicing',
+    'invoices' => 'invoicing',
+    'invoicing' => 'invoicing',
+    'reports' => 'reports',
+    'maintenance' => 'maintenance',
+    'navman' => 'navman',
+    'documents' => 'documents',
+    'settings' => 'settings',
+];
+
+foreach ($portalSections as $uri => $section) {
+    Route::get('/'.$uri, function () use ($section) {
+        return view('portal', ['section' => $section]);
+    })->middleware('auth')->name($uri === 'portal' ? 'portal' : 'portal.'.$uri);
+}
 
 Route::post('/logout', function (Request $request) {
     Auth::logout();
@@ -20,3 +42,11 @@ Route::post('/logout', function (Request $request) {
 
     return redirect()->route('login');
 })->middleware('auth')->name('logout');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/xero/connect', [XeroController::class, 'connect'])->name('xero.connect');
+    Route::get('/xero/callback', [XeroController::class, 'callback'])->name('xero.callback');
+    Route::post('/xero/sync', [XeroController::class, 'sync'])->name('xero.sync');
+    Route::post('/xero/disconnect', [XeroController::class, 'disconnect'])->name('xero.disconnect');
+    Route::post('/xero/invoices/{invoice}/push', [XeroController::class, 'pushInvoice'])->name('xero.invoices.push');
+});

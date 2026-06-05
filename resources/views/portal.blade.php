@@ -12,7 +12,7 @@
     </head>
     <body class="light">
         <main class="portal-shell">
-            <livewire:portal />
+            <livewire:portal :section="$section ?? 'dashboard'" />
         </main>
 
         @livewireScripts

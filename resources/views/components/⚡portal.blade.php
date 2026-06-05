@@ -61,7 +61,7 @@ new class extends Component
         'gst_rate' => '15',
     ];
 
-    public function mount(): void
+    public function mount(string $section = 'dashboard'): void
     {
         $data = $this->loadPortalData();
 
@@ -69,15 +69,49 @@ new class extends Component
             $this->{$key} = $value;
         }
 
+        $this->page = $this->normalizePage($section);
         $this->resetForms();
     }
 
     public function setPage(string $page): void
     {
-        $this->page = $page;
-        $this->search = '';
-        $this->modal = null;
-        $this->mobileMenuOpen = false;
+        $this->redirectRoute($this->routeNameForPage($page), navigate: true);
+    }
+
+    private function normalizePage(string $section): string
+    {
+        return [
+            'dashboard' => 'dashboard',
+            'dashabord' => 'dashboard',
+            'portal' => 'dashboard',
+            'fleet' => 'fleet',
+            'fleets' => 'fleet',
+            'customers' => 'customers',
+            'hires' => 'hires',
+            'hire-management' => 'hires',
+            'invoicing' => 'invoicing',
+            'reports' => 'reports',
+            'maintenance' => 'maintenance',
+            'navman' => 'navman',
+            'documents' => 'documents',
+            'settings' => 'settings',
+        ][$section] ?? 'dashboard';
+    }
+
+    private function routeNameForPage(string $page): string
+    {
+        return [
+            'dashboard' => 'portal.dashboard',
+            'fleet' => 'portal.fleets',
+            'customers' => 'portal.customers',
+            'hires' => 'portal.hire-management',
+            'invoicing' => 'portal.invoicing',
+            'reports' => 'portal.reports',
+            'maintenance' => 'portal.maintenance',
+            'navman' => 'portal.navman',
+            'documents' => 'portal.documents',
+            'settings' => 'portal.settings',
+        ][$page] ?? 'portal.dashboard';
     }
 
     public function openMobileMenu(): void
@@ -869,12 +903,12 @@ new class extends Component
                 @if($toast)
                     <span class="badge badge-green">{{ $toast }}</span>
                 @endif
-                <button type="button" class="btn btn-ghost btn-sm" wire:click="openModal('hire')">+ New Hire</button>
+                <button type="button" class="btn btn-primary btn-sm" wire:click="openModal('hire')">+ New Hire</button>
             </div>
         </header>
 
         <main class="content">
-            @if(in_array($page, ['fleet','customers','hires','invoicing','documents']))
+            @if(in_array($page, ['fleet','customers','hires','documents']))
                 <div class="card card-sm mb-4">
                     <input type="search" wire:model.live.debounce.250ms="search" placeholder="Search {{ $page }}...">
                 </div>
