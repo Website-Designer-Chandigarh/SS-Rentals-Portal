@@ -33,6 +33,8 @@ new class extends Component
     public string $invoiceType = 'weekly';
     public string $invoicePeriodFrom = '';
     public string $invoicePeriodTo = '';
+    public int $quoteStep = 0;
+    public ?string $selectedQuoteTemplate = null;
 
     public array $trucks = [];
     public array $trailers = [];
@@ -44,11 +46,13 @@ new class extends Component
     public array $weekly_revenue = [];
     public array $monthly_revenue = [];
     public array $pnl_detail = [];
+    public array $savedQuotes = [];
 
     public array $vehicleForm = [];
     public array $customerForm = [];
     public array $hireForm = [];
     public array $invoiceForm = [];
+    public array $quoteForm = [];
     public array $navmanForm = [];
     public array $settingsForm = [
         'company' => 'SS Rentals Ltd',
@@ -70,6 +74,7 @@ new class extends Component
 
         $this->page = $this->normalizePage($section);
         $this->resetForms();
+        $this->savedQuotes = Schema::hasTable('app_settings') ? (AppSetting::query()->find('portal_quotes')?->payload ?: []) : [];
     }
 
     public function setPage(string $page): void
@@ -307,6 +312,114 @@ new class extends Component
         $this->invoiceStep = 4;
     }
 
+    public function startQuote(?string $templateId = null): void
+    {
+        $template = $templateId ? $this->quoteTemplate($templateId) : null;
+        $this->selectedQuoteTemplate = $templateId;
+        $this->quoteForm = $this->emptyQuote($template);
+        $this->quoteStep = 2;
+    }
+
+    public function backToQuoteTemplates(): void
+    {
+        $this->quoteStep = 0;
+    }
+
+    public function setQuoteCustomerMode(string $mode): void
+    {
+        $this->quoteForm['customerMode'] = $mode === 'existing' ? 'existing' : 'new';
+        $this->quoteForm['useExistingCustomer'] = '';
+
+        if ($this->quoteForm['customerMode'] === 'existing') {
+            foreach (['companyName', 'contactName', 'contactPhone', 'contactEmail', 'contactAddress'] as $field) {
+                $this->quoteForm[$field] = '';
+            }
+        }
+    }
+
+    public function selectQuoteCustomer(): void
+    {
+        $customer = $this->findById($this->customers, $this->quoteForm['useExistingCustomer'] ?? null);
+        if (! $customer) {
+            return;
+        }
+
+        $this->quoteForm['companyName'] = $customer['company'] ?? '';
+        $this->quoteForm['contactName'] = $customer['contact'] ?? '';
+        $this->quoteForm['contactPhone'] = $customer['phone'] ?? '';
+        $this->quoteForm['contactEmail'] = $customer['email'] ?? '';
+        $this->quoteForm['contactAddress'] = $customer['address'] ?? '';
+    }
+
+    public function saveQuote(): void
+    {
+        if ($this->storeQuote()) {
+            $this->flash('Quote saved');
+        }
+    }
+
+    public function downloadQuotePDF(): void
+    {
+        if (! $this->storeQuote()) {
+            return;
+        }
+
+        $this->flash('Quote saved');
+        $this->js('setTimeout(() => window.print(), 100)');
+    }
+
+    private function storeQuote(): bool
+    {
+        if (blank($this->quoteForm['companyName'] ?? null)) {
+            $this->flash('Enter a company name before saving quote');
+            return false;
+        }
+
+        if (($this->quoteForm['customerMode'] ?? 'new') === 'new') {
+            $existing = collect($this->customers)->first(fn ($customer) => mb_strtolower(trim($customer['company'] ?? '')) === mb_strtolower(trim($this->quoteForm['companyName'] ?? '')));
+            if (! $existing) {
+                $this->customers = $this->upsert($this->customers, array_merge($this->emptyCustomer(), [
+                    'id' => 'C'.str_pad((string) (count($this->customers) + 1), 3, '0', STR_PAD_LEFT),
+                    'company' => $this->quoteForm['companyName'] ?? '',
+                    'contact' => $this->quoteForm['contactName'] ?? '',
+                    'phone' => $this->quoteForm['contactPhone'] ?? '',
+                    'email' => $this->quoteForm['contactEmail'] ?? '',
+                    'address' => $this->quoteForm['contactAddress'] ?? '',
+                    'status' => 'prospect',
+                ]));
+                $this->persist('customers');
+            }
+        }
+
+        $id = $this->quoteForm['savedQuoteId'] ?: 'Q-'.now()->timestamp;
+        $this->quoteForm['savedQuoteId'] = $id;
+        $record = ['id' => $id, 'savedAt' => now()->toIso8601String(), 'form' => $this->quoteForm];
+        $this->savedQuotes = array_values(array_filter($this->savedQuotes, fn ($quote) => ($quote['id'] ?? null) !== $id));
+        array_unshift($this->savedQuotes, $record);
+        $this->persistQuotes();
+
+        return true;
+    }
+
+    public function editQuote(string $id): void
+    {
+        $record = collect($this->savedQuotes)->firstWhere('id', $id);
+        if (! $record) {
+            return;
+        }
+
+        $this->selectedQuoteTemplate = $record['form']['templateId'] ?? null;
+        $this->quoteForm = array_merge($this->emptyQuote(null), $record['form'], ['savedQuoteId' => $id]);
+        $this->quoteStep = 2;
+    }
+
+    public function deleteQuote(string $id): void
+    {
+        $this->savedQuotes = array_values(array_filter($this->savedQuotes, fn ($quote) => ($quote['id'] ?? null) !== $id));
+        $this->persistQuotes();
+        $this->flash('Quote deleted');
+    }
+
     public function downloadInvoicePDF(string $invoiceId): void
     {
         $this->redirect(route('invoice.pdf', ['invoice' => $invoiceId]));
@@ -415,6 +528,15 @@ new class extends Component
             'settings' => AppSetting::query()->updateOrCreate(['key' => 'portal'], ['payload' => $this->settingsForm]),
             default => null,
         };
+    }
+
+    private function persistQuotes(): void
+    {
+        if (! Schema::hasTable('app_settings')) {
+            return;
+        }
+
+        AppSetting::query()->updateOrCreate(['key' => 'portal_quotes'], ['payload' => $this->savedQuotes]);
     }
 
     private function persistVehicles(array $vehicles, string $assetType): void
@@ -541,6 +663,81 @@ new class extends Component
         $this->customerForm = $this->emptyCustomer();
         $this->hireForm = $this->emptyHire();
         $this->invoiceForm = $this->emptyInvoice();
+        $this->quoteForm = $this->emptyQuote(null);
+    }
+
+    public function quoteTemplates(): array
+    {
+        return [
+            [
+                'id' => 'QT001', 'name' => 'Truck & Trailer Rental Quote', 'type' => 'truck_trailer', 'chargeType' => 'weekly',
+                'truckDesc' => '2019 Volvo 8x4 Curtainside Truck', 'trailerDesc' => '2017 Domett 5-Axle Curtainside Pull Trailer',
+                'weeklyRate' => 2430.58, 'monthlyRate' => 0, 'rucRate' => 0.65, 'mileageRate' => 0, 'duration' => 52, 'durationUnit' => 'weeks',
+                'notes' => "All prices are in NZD and exclude GST.\nRUC and mileage charges apply on top of weekly hire rates.\nContract maximum mileage is 130,000 km per annum.\nQuotes exclude GST, fuel, and insurance costs.\nThis is a fully maintained truck and trailer quote.",
+            ],
+            [
+                'id' => 'QT002', 'name' => 'Truck Only Rental Quote', 'type' => 'truck_only', 'chargeType' => 'weekly',
+                'truckDesc' => '2019 Volvo 8x4 Curtainside Truck', 'trailerDesc' => '',
+                'weeklyRate' => 1716.99, 'monthlyRate' => 0, 'rucRate' => 0.45, 'mileageRate' => 0, 'duration' => 52, 'durationUnit' => 'weeks',
+                'notes' => "All prices are in NZD and exclude GST.\nRUC and mileage charges apply on top of weekly hire rates.\nContract maximum mileage is 130,000 km per annum.\nQuotes exclude GST, fuel, and insurance costs.\nThis is a fully maintained truck quote.",
+            ],
+            [
+                'id' => 'QT003', 'name' => 'Truck & Trailer Monthly Quote (4-Axle)', 'type' => 'truck_trailer', 'chargeType' => 'monthly',
+                'truckDesc' => '2018 Hino 8x4 Curtainside Truck with Tail Lift', 'trailerDesc' => '2011 Fruehauf 4-Axle Curtainside Pull Trailer',
+                'weeklyRate' => 0, 'monthlyRate' => 7830.58, 'rucRate' => 0.71, 'mileageRate' => 0, 'duration' => 12, 'durationUnit' => 'months',
+                'notes' => "All prices are in NZD and exclude GST.\nRUC and mileage charges apply on top of monthly hire rates.\nContract maximum mileage is 130,000 km per annum.\nQuotes exclude GST, fuel, and insurance costs.\nThis is a fully maintained truck and trailer quote.",
+            ],
+            [
+                'id' => 'QT004', 'name' => '5-Axle Pull Trailer Lease Quote', 'type' => 'trailer_only', 'chargeType' => 'monthly',
+                'truckDesc' => '', 'trailerDesc' => '2022 22-Pallet TMC 5-Axle Curtainside Pull Trailer',
+                'weeklyRate' => 0, 'monthlyRate' => 3390.85, 'rucRate' => 0.18, 'mileageRate' => 0, 'duration' => 12, 'durationUnit' => 'months',
+                'notes' => "All prices are in NZD and exclude GST.\nTrailer will be fully branded to customer colours.\nRUC and mileage charges apply on top of monthly hire rates.\nContract maximum mileage is 192,000 km per annum.\nQuotes exclude GST and insurance costs.\nThis is a fully maintained trailer quote.",
+            ],
+            [
+                'id' => 'QT005', 'name' => 'Swinglift Lease Quote (Multi-Term)', 'type' => 'truck_trailer', 'chargeType' => 'monthly',
+                'truckDesc' => '2022 Volvo 8x4 Sleeper-Cab Tractor Unit', 'trailerDesc' => '2026 Patchell Quad-Axle Swinglift Trailer',
+                'weeklyRate' => 0, 'monthlyRate' => 11189.33, 'rucRate' => 0, 'mileageRate' => 0, 'duration' => 12, 'durationUnit' => 'months',
+                'notes' => "All prices are in NZD and exclude GST.\nRUC charges will be paid by hirer via DDB.\nMileage charges are included in the monthly lease payment.\nContract maximum mileage is 130,000 km per annum.\nQuotes exclude GST, fuel, and insurance costs.\nThis is a fully maintained truck and trailer lease quote.",
+            ],
+        ];
+    }
+
+    private function quoteTemplate(?string $id): ?array
+    {
+        return collect($this->quoteTemplates())->firstWhere('id', $id);
+    }
+
+    private function emptyQuote(?array $template): array
+    {
+        return [
+            'savedQuoteId' => '',
+            'templateId' => $template['id'] ?? null,
+            'quoteNumber' => 'Q-'.now()->format('His'),
+            'quoteDate' => now()->toDateString(),
+            'validDays' => 14,
+            'customerMode' => 'new',
+            'useExistingCustomer' => '',
+            'companyName' => '',
+            'contactName' => '',
+            'contactPhone' => '',
+            'contactEmail' => '',
+            'contactAddress' => '',
+            'vehicleType' => $template['type'] ?? 'truck_trailer',
+            'hireDuration' => $template['duration'] ?? '',
+            'hireDurationUnit' => $template['durationUnit'] ?? 'weeks',
+            'startDate' => now()->toDateString(),
+            'endDate' => '',
+            'truckDesc' => $template['truckDesc'] ?? '',
+            'trailerDesc' => $template['trailerDesc'] ?? '',
+            'chargeType' => $template['chargeType'] ?? 'weekly',
+            'dailyRate' => 0,
+            'weeklyRate' => $template['weeklyRate'] ?? 0,
+            'monthlyRate' => $template['monthlyRate'] ?? 0,
+            'rucRate' => $template['rucRate'] ?? 0,
+            'mileageRate' => $template['mileageRate'] ?? 0,
+            'maxMileage' => '130,000 km p.a. (10,833 km/month)',
+            'notes' => $template['notes'] ?? "All prices are in NZD and exclude GST.\nRUC and mileage charges apply on top of hire rates.\nQuotes exclude GST, fuel, and insurance costs.",
+        ];
     }
 
     private function emptyVehicle(): array

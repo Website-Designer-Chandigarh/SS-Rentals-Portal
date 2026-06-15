@@ -7,98 +7,60 @@
         $rucCost = $s['weeklyKm'] * 0.062;
         $currentMonth = end($monthly_revenue) ?? [];
         $latestPnl = end($pnl_detail) ?? [];
+        $expenseLabels = [
+            'insurance' => 'Insurance',
+            'ruc' => 'RUC Charges',
+            'repairs' => 'Repairs & Maintenance',
+            'advertising' => 'Advertising',
+            'navman_ruc' => 'Navman / RUC Purchase',
+            'other' => 'Other Expenses',
+            'flexi' => 'Flexi Finance',
+            'gst' => 'GST / Other Tax',
+            'heartland' => 'Heartland Finance',
+        ];
+        $expenseLeftItems = ['insurance', 'ruc', 'repairs', 'advertising'];
+        $expenseRightItems = ['navman_ruc', 'other', 'flexi', 'gst', 'heartland'];
+        $expenseKeys = array_merge($expenseLeftItems, $expenseRightItems);
+        $defaultPortalData = json_decode(file_get_contents(resource_path('data/portal-data.json')), true) ?: [];
+        $defaultPnlDetail = collect($defaultPortalData['pnl_detail'] ?? []);
+        $categorySum = fn($row) => array_sum(array_map(fn($key) => (float) ($row[$key] ?? 0), $expenseKeys));
+        $monthKeyFor = function ($label) {
+            if (preg_match('/^\d{4}-\d{2}$/', (string) $label)) {
+                return $label;
+            }
+
+            foreach (['M y', 'M Y', 'F y', 'F Y'] as $format) {
+                try {
+                    return \Carbon\Carbon::createFromFormat('!'.$format, (string) $label)->format('Y-m');
+                } catch (\Throwable $e) {
+                }
+            }
+
+            return $label;
+        };
         
-        // Build all months data
+        // Build all months from actual revenue rows. Monthly revenue labels are "May 26",
+        // while P&L detail keys are "2026-05", matching portal.html.
+        $monthRows = array_slice($monthly_revenue, -11);
         $allMonths = [];
-        for ($i = 10; $i >= 0; $i--) {
-            $date = \Carbon\Carbon::now()->subMonths($i);
-            $monthData = collect($monthly_revenue)->firstWhere('month', $date->format('M y'));
-            $pnlData = collect($pnl_detail)->firstWhere('month', $date->format('M y'));
+        foreach ($monthRows as $index => $monthData) {
+            $monthKey = $monthKeyFor($monthData['month']);
+            $pnlData = collect($pnl_detail)->firstWhere('month', $monthKey);
+            $defaultPnlData = $defaultPnlDetail->firstWhere('month', $monthKey);
+            if ((! $pnlData || $categorySum($pnlData) <= 0) && $defaultPnlData) {
+                $pnlData = $defaultPnlData;
+            }
             $allMonths[] = [
-                'label' => $date->format('M y'),
+                'label' => $monthData['month'],
                 'revenue' => $monthData['amount'] ?? 0,
                 'expenses' => $monthData['expenses'] ?? 0,
                 'net' => $monthData['net'] ?? 0,
-                'isCurrent' => $i === 0,
+                'isCurrent' => $index === count($monthRows) - 1,
                 'pnl' => $pnlData ?? []
             ];
         }
+        $currentPnl = $allMonths ? ($allMonths[array_key_last($allMonths)]['pnl'] ?? []) : $latestPnl;
     @endphp
-    
-    <!-- Monthly P&L Section -->
-    <div class="card" style="grid-column: 1 / -1; margin-bottom: 24px">
-        <div class="card-header" style="justify-content: space-between">
-            <span class="card-title" style="font-size: 18px; font-weight: 600">Monthly P&L</span>
-            <button type="button" class="btn btn-sm" style="background: #E3F2FD; color: #1976D2; border: 1px solid #BBDEFB; border-radius: 16px; padding: 6px 12px; font-size: 11px; font-weight: 600">LAST 11 MONTHS</button>
-        </div>
-        
-        <!-- Monthly Timeline -->
-        <div id="monthlyTimeline" style="display: flex; gap: 8px; padding: 20px; overflow-x: auto; border-bottom: 1px solid #eee; margin-bottom: 16px">
-            @foreach($allMonths as $index => $month)
-                @php
-                    $trendSign = $month['net'] >= 0 ? '+' : '';
-                @endphp
-                <button type="button" onclick="selectMonth({{ $index }}, event)" class="month-btn{{ $month['isCurrent'] ? ' active' : '' }}" data-index="{{ $index }}" style="flex-shrink: 0; text-align: center; padding: 8px 12px; background: {{ $month['isCurrent'] ? '#F5F5F5' : 'transparent' }}; border-radius: 6px; min-width: 100px; border: {{ $month['isCurrent'] ? '2px solid #333' : '1px solid transparent' }}; cursor: pointer; transition: all 0.2s; font-family: inherit">
-                    <div style="font-size: 11px; font-weight: 600; color: #333">{{ $month['label'] }}</div>
-                    <div style="font-size: 12px; font-weight: 700; color: {{ $month['net'] >= 0 ? '#27AE60' : '#D32F2F' }}; margin-top: 4px">{{ $trendSign }}{{ $this->money($month['net']) }}</div>
-                </button>
-            @endforeach
-        </div>
-
-        <!-- Current Month Highlight -->
-        <div style="padding: 0 20px; margin-bottom: 16px">
-            <div style="display: flex; align-items: center; justify-content: space-between">
-                <div>
-                    <span class="card-title" id="monthTitle" style="font-size: 16px">May 2026</span>
-                    <span id="profitBadge" style="margin-left: 12px; background: #C8E6C9; color: #27AE60; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600">PROFIT: {{ $this->money($currentMonth['net'] ?? 0) }}</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- KPI Cards -->
-        <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; padding: 0 20px">
-            <div id="revenueCard" style="background: #E8F5E9; border-radius: 8px; padding: 16px">
-                <div style="font-size: 11px; font-weight: 600; color: #27AE60; text-transform: uppercase; letter-spacing: 0.5px">Total Revenue</div>
-                <div id="revenueValue" style="font-size: 28px; font-weight: 700; color: #1B5E20; margin-top: 8px">{{ $this->money($currentMonth['amount'] ?? 0) }}</div>
-            </div>
-            <div id="expensesCard" style="background: #FFF3E0; border-radius: 8px; padding: 16px">
-                <div style="font-size: 11px; font-weight: 600; color: #FF9800; text-transform: uppercase; letter-spacing: 0.5px">Total Expenses</div>
-                <div id="expensesValue" style="font-size: 28px; font-weight: 700; color: #E65100; margin-top: 8px">{{ $this->money($currentMonth['expenses'] ?? 0) }}</div>
-            </div>
-            <div id="profitCard" style="background: #E3F2FD; border-radius: 8px; padding: 16px">
-                <div id="profitLabel" style="font-size: 11px; font-weight: 600; color: #1976D2; text-transform: uppercase; letter-spacing: 0.5px">Net Profit</div>
-                <div id="profitValue" style="font-size: 28px; font-weight: 700; color: #0D47A1; margin-top: 8px">{{ $this->money($currentMonth['net'] ?? 0) }}</div>
-                <div id="marginValue" style="font-size: 12px; color: #666; margin-top: 6px">Margin: {{ ($currentMonth['amount'] ?? 0) > 0 ? round(($currentMonth['net'] / $currentMonth['amount']) * 100) : 0 }}%</div>
-            </div>
-        </div>
-
-        <!-- Expense Breakdown -->
-        <div style="border-top: 1px solid #eee; padding-top: 16px; padding: 16px 20px">
-            @php
-                $expensePercent = ($currentMonth['amount'] ?? 0) > 0 ? round(($currentMonth['expenses'] / $currentMonth['amount']) * 100) : 0;
-            @endphp
-            <div class="section-title" style="margin-bottom: 16px; font-size: 12px; font-weight: 600; text-transform: uppercase; color: #666; letter-spacing: 0.5px">Expense Breakdown</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px">
-                <div id="expenseLeft" style="display: flex; flex-direction: column; gap: 12px">
-                    <!-- Left Column - will be updated by JS -->
-                </div>
-                <div id="expenseRight" style="display: flex; flex-direction: column; gap: 12px">
-                    <!-- Right Column - will be updated by JS -->
-                </div>
-            </div>
-
-            <!-- Expenses Percentage Bar -->
-            <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
-                    <span style="font-size: 12px; color: #666; font-weight: 600">Expenses as % of Revenue</span>
-                    <span id="expensePercent" style="font-size: 12px; color: #333; font-weight: 700">{{ $expensePercent }}%</span>
-                </div>
-                <div style="width: 100%; height: 6px; background: #E0E0E0; border-radius: 3px; overflow: hidden">
-                    <div id="expenseBar" style="width: {{ $expensePercent }}%; height: 100%; background: linear-gradient(90deg, #27AE60 0%, #27AE60 100%); border-radius: 3px; transition: all 0.3s"></div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- KPI Cards Row 1 -->
     <div class="grid grid-4 mb-4">
@@ -239,6 +201,100 @@
             </tbody></table></div>
         </div>
     </div>
+    <!-- Monthly P&L Section -->
+    <div class="card" style="grid-column: 1 / -1; margin-bottom: 24px">
+        <div class="card-header" style="justify-content: space-between">
+            <span class="card-title" style="font-size: 18px; font-weight: 600">Monthly P&L</span>
+            <button type="button" class="btn btn-sm" style="background: #E3F2FD; color: #1976D2; border: 1px solid #BBDEFB; border-radius: 16px; padding: 6px 12px; font-size: 11px; font-weight: 600">LAST 11 MONTHS</button>
+        </div>
+        
+        <!-- Monthly Timeline -->
+        <div id="monthlyTimeline" style="display: flex; gap: 8px; padding: 20px; overflow-x: auto; border-bottom: 1px solid #eee; margin-bottom: 16px">
+            @foreach($allMonths as $index => $month)
+                @php
+                    $trendSign = $month['net'] >= 0 ? '+' : '';
+                @endphp
+                <button type="button" onclick="selectMonth({{ $index }}, event)" class="month-btn{{ $month['isCurrent'] ? ' active' : '' }}" data-index="{{ $index }}" style="flex-shrink: 0; text-align: center; padding: 8px 12px; background: {{ $month['isCurrent'] ? '#F5F5F5' : 'transparent' }}; border-radius: 6px; min-width: 100px; border: {{ $month['isCurrent'] ? '2px solid #333' : '1px solid transparent' }}; cursor: pointer; transition: all 0.2s; font-family: inherit">
+                    <div style="font-size: 11px; font-weight: 600; color: #333">{{ $month['label'] }}</div>
+                    <div style="font-size: 12px; font-weight: 700; color: {{ $month['net'] >= 0 ? '#27AE60' : '#D32F2F' }}; margin-top: 4px">{{ $trendSign }}{{ $this->money($month['net']) }}</div>
+                </button>
+            @endforeach
+        </div>
+
+        <!-- Current Month Highlight -->
+        <div style="padding: 0 20px; margin-bottom: 16px">
+            <div style="display: flex; align-items: center; justify-content: space-between">
+                <div>
+                    <span class="card-title" id="monthTitle" style="font-size: 16px">May 2026</span>
+                    <span id="profitBadge" style="margin-left: 12px; background: #C8E6C9; color: #27AE60; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600">PROFIT: {{ $this->money($currentMonth['net'] ?? 0) }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- KPI Cards -->
+        <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; padding: 0 20px">
+            <div id="revenueCard" style="background: #E8F5E9; border-radius: 8px; padding: 16px">
+                <div style="font-size: 11px; font-weight: 600; color: #27AE60; text-transform: uppercase; letter-spacing: 0.5px">Total Revenue</div>
+                <div id="revenueValue" style="font-size: 28px; font-weight: 700; color: #1B5E20; margin-top: 8px">{{ $this->money($currentMonth['amount'] ?? 0) }}</div>
+            </div>
+            <div id="expensesCard" style="background: #FFF3E0; border-radius: 8px; padding: 16px">
+                <div style="font-size: 11px; font-weight: 600; color: #FF9800; text-transform: uppercase; letter-spacing: 0.5px">Total Expenses</div>
+                <div id="expensesValue" style="font-size: 28px; font-weight: 700; color: #E65100; margin-top: 8px">{{ $this->money($currentMonth['expenses'] ?? 0) }}</div>
+            </div>
+            <div id="profitCard" style="background: #E3F2FD; border-radius: 8px; padding: 16px">
+                <div id="profitLabel" style="font-size: 11px; font-weight: 600; color: #1976D2; text-transform: uppercase; letter-spacing: 0.5px">Net Profit</div>
+                <div id="profitValue" style="font-size: 28px; font-weight: 700; color: #0D47A1; margin-top: 8px">{{ $this->money($currentMonth['net'] ?? 0) }}</div>
+                <div id="marginValue" style="font-size: 12px; color: #666; margin-top: 6px">Margin: {{ ($currentMonth['amount'] ?? 0) > 0 ? round(($currentMonth['net'] / $currentMonth['amount']) * 100) : 0 }}%</div>
+            </div>
+        </div>
+
+        <!-- Expense Breakdown -->
+        <div style="border-top: 1px solid #eee; padding-top: 16px; padding: 16px 20px">
+            @php
+                $expensePercent = ($currentMonth['amount'] ?? 0) > 0 ? round(($currentMonth['expenses'] / $currentMonth['amount']) * 100) : 0;
+            @endphp
+            <div class="section-title" style="margin-bottom: 16px; font-size: 12px; font-weight: 600; text-transform: uppercase; color: #666; letter-spacing: 0.5px">Expense Breakdown</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px">
+                <div id="expenseLeft" style="display: flex; flex-direction: column; gap: 12px">
+                    @php $hasLeftExpenses = false; @endphp
+                    @foreach($expenseLeftItems as $key)
+                        @if(($currentPnl[$key] ?? 0) > 0)
+                            @php $hasLeftExpenses = true; @endphp
+                            <div style="display: flex; justify-content: space-between; align-items: center">
+                                <span style="font-size: 12px; color: #333">{{ $expenseLabels[$key] }}</span>
+                                <span style="font-size: 12px; font-weight: 600; color: #666">{{ $this->money($currentPnl[$key]) }}</span>
+                            </div>
+                        @endif
+                    @endforeach
+                    @unless($hasLeftExpenses)<div style="color: #999; font-size: 12px">No expenses</div>@endunless
+                </div>
+                <div id="expenseRight" style="display: flex; flex-direction: column; gap: 12px">
+                    @php $hasRightExpenses = false; @endphp
+                    @foreach($expenseRightItems as $key)
+                        @if(($currentPnl[$key] ?? 0) > 0)
+                            @php $hasRightExpenses = true; @endphp
+                            <div style="display: flex; justify-content: space-between; align-items: center">
+                                <span style="font-size: 12px; color: #333">{{ $expenseLabels[$key] }}</span>
+                                <span style="font-size: 12px; font-weight: 600; color: #666">{{ $this->money($currentPnl[$key]) }}</span>
+                            </div>
+                        @endif
+                    @endforeach
+                    @unless($hasRightExpenses)<div style="color: #999; font-size: 12px">No expenses</div>@endunless
+                </div>
+            </div>
+
+            <!-- Expenses Percentage Bar -->
+            <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
+                    <span style="font-size: 12px; color: #666; font-weight: 600">Expenses as % of Revenue</span>
+                    <span id="expensePercent" style="font-size: 12px; color: #333; font-weight: 700">{{ $expensePercent }}%</span>
+                </div>
+                <div style="width: 100%; height: 6px; background: #E0E0E0; border-radius: 3px; overflow: hidden">
+                    <div id="expenseBar" style="width: {{ $expensePercent }}%; height: 100%; background: linear-gradient(90deg, #27AE60 0%, #27AE60 100%); border-radius: 3px; transition: all 0.3s"></div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="card" style="border-left:3px solid var(--brand-primary);background:linear-gradient(135deg,var(--card) 0%,var(--bg3) 100%);grid-column: 1 / -1">
         <div class="card-header"><span class="card-title">🤖 AI Operational Summary — {{ \Carbon\Carbon::now()->format('d M Y') }}</span><span class="badge badge-blue">AI Generated</span></div>
         <div style="font-size:13px;color:var(--text2);line-height:1.8;display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -261,9 +317,44 @@
 // Global scope - accessible from button onclick handlers
 const monthlyData = @json($allMonths);
 const pnlData = @json($pnl_detail);
+const defaultPnlData = @json($defaultPortalData['pnl_detail'] ?? []);
+const expenseKeys = @json($expenseKeys);
 
 function formatCurrency(value) {
     return '$' + value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function normalizeMonthKey(label) {
+    if (/^\d{4}-\d{2}$/.test(label)) return label;
+    const months = {
+        jan: '01', january: '01',
+        feb: '02', february: '02',
+        mar: '03', march: '03',
+        apr: '04', april: '04',
+        may: '05',
+        jun: '06', june: '06',
+        jul: '07', july: '07',
+        aug: '08', august: '08',
+        sep: '09', sept: '09', september: '09',
+        oct: '10', october: '10',
+        nov: '11', november: '11',
+        dec: '12', december: '12'
+    };
+    const match = String(label).trim().toLowerCase().match(/^([a-z]+)\s+(\d{2}|\d{4})$/);
+    if (!match || !months[match[1]]) return label;
+    const year = match[2].length === 2 ? '20' + match[2] : match[2];
+    return year + '-' + months[match[1]];
+}
+
+function expenseCategoryTotal(row) {
+    return expenseKeys.reduce((sum, key) => sum + Number(row?.[key] || 0), 0);
+}
+
+function pnlForMonth(month) {
+    const monthKey = normalizeMonthKey(month.label);
+    const row = month.pnl || pnlData.find(item => item.month === monthKey) || {};
+    if (expenseCategoryTotal(row) > 0) return row;
+    return defaultPnlData.find(item => item.month === monthKey) || row;
 }
 
 function selectMonth(index, event) {
@@ -275,7 +366,7 @@ function selectMonth(index, event) {
     if (!month) return;
 
     const label = month.label;
-    const pnl = month.pnl || {};
+    const pnl = pnlForMonth(month);
 
     // Update active button
     document.querySelectorAll('.month-btn').forEach((btn, i) => {

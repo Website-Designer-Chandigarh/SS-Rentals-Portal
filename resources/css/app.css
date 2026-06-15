@@ -29,7 +29,7 @@
     --sidebar-w: 240px;
     --bg: #F4F5F8;
     --bg2: #FFFFFF;
-    --bg3: #EEF0F5;
+    --bg3: #E8E8ED;
     --bg4: #DDE1EA;
     --card: #FFFFFF;
     --card2: #F9FAFC;
@@ -853,6 +853,203 @@ select option {
     gap: 14px
 }
 
+/* QUOTES */
+.quote-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 20px 0 16px
+}
+
+.quote-template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 14px
+}
+
+.quote-template-card,
+.quote-saved-card {
+    background: var(--card);
+    border: 1.5px solid #E2E6EE;
+    border-radius: 12px;
+    padding: 16px 18px;
+    text-align: left;
+    min-height: 148px;
+    box-shadow: 0 12px 34px rgba(31, 24, 44, .055)
+}
+
+.quote-template-card {
+    display: flex;
+    gap: 12px;
+    cursor: pointer;
+    transition: border .15s, box-shadow .15s, transform .15s
+}
+
+.quote-template-card:hover {
+    border-color: var(--brand-primary);
+    box-shadow: 0 14px 36px rgba(var(--brand-primary-rgb), .14);
+    transform: translateY(-1px)
+}
+
+.quote-template-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(var(--brand-primary-rgb), .1);
+    color: var(--brand-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 36px;
+    font-size: 10px;
+    font-weight: 900
+}
+
+.quote-template-body,
+.quote-saved-card {
+    display: flex;
+    flex-direction: column;
+    gap: 5px
+}
+
+.quote-template-body strong,
+.quote-saved-card strong {
+    font-size: 13px;
+    color: var(--text)
+}
+
+.quote-template-body small,
+.quote-saved-card small,
+.quote-template-body span {
+    font-size: 11px;
+    color: var(--text2)
+}
+
+.quote-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px
+}
+
+.quote-badges .badge {
+    font-style: normal
+}
+
+.quote-template-action {
+    color: var(--brand-primary) !important;
+    font-weight: 800;
+    align-self: flex-end;
+    margin-top: auto
+}
+
+.quote-saved-actions,
+.quote-actions,
+.quote-breadcrumb,
+.quote-summary-head {
+    display: flex;
+    align-items: center;
+    gap: 10px
+}
+
+.quote-saved-actions {
+    margin-top: auto
+}
+
+.quote-form-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px
+}
+
+.quote-column {
+    display: flex;
+    flex-direction: column;
+    gap: 14px
+}
+
+.quote-breadcrumb {
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--text2)
+}
+
+.quote-breadcrumb strong,
+.quote-summary-head strong {
+    color: var(--brand-primary-dark)
+}
+
+.quote-summary {
+    margin-top: 14px;
+    background: rgba(var(--brand-primary-rgb), .045);
+    border-color: rgba(var(--brand-primary-rgb), .16)
+}
+
+.quote-summary-head {
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: 13px
+}
+
+.quote-summary-head span {
+    font-size: 11px;
+    color: var(--text2)
+}
+
+.quote-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 12px
+}
+
+.quote-summary-grid > div {
+    background: var(--card);
+    border: 1px solid #E2E6EE;
+    border-radius: 8px;
+    padding: 9px 10px;
+    min-width: 0
+}
+
+.quote-summary-grid small {
+    display: block;
+    color: var(--text3);
+    font-size: 10px;
+    margin-bottom: 3px
+}
+
+.quote-summary-grid strong {
+    display: block;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
+}
+
+.quote-actions .btn {
+    flex: 1;
+    justify-content: center
+}
+
+.quote-purple {
+    color: var(--brand-primary);
+    border-color: var(--brand-primary)
+}
+
+.quote-green {
+    color: var(--green);
+    border-color: var(--green)
+}
+
+.quote-muted-field {
+    opacity: .78
+}
+
+.quote-print-doc {
+    display: none
+}
+
 /* STATUS DOT */
 .dot {
     width: 8px;
@@ -1467,6 +1664,24 @@ select option {
         gap: 10px
     }
 
+    .quote-head,
+    .quote-summary-head,
+    .quote-actions {
+        align-items: stretch;
+        flex-direction: column
+    }
+
+    .quote-template-grid,
+    .quote-form-grid,
+    .quote-summary-grid {
+        grid-template-columns: 1fr
+    }
+
+    .quote-template-card,
+    .quote-saved-card {
+        min-height: auto
+    }
+
     input,
     select,
     textarea {
@@ -1586,6 +1801,182 @@ select option {
         align-self: center;
         padding: 24px 20px;
         border-radius: 12px
+    }
+}
+
+@media print {
+    @page {
+        size: A4;
+        margin: 1.5cm
+    }
+
+    body {
+        margin: 0 !important;
+        background: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact
+    }
+
+    body * {
+        visibility: hidden !important
+    }
+
+    .quote-print-doc,
+    .quote-print-doc * {
+        visibility: visible !important
+    }
+
+    .quote-print-doc {
+        display: block !important;
+        position: absolute;
+        inset: 0 auto auto 0;
+        width: 100%;
+        padding: 0;
+        color: #1a1a2e;
+        background: #fff;
+        font-family: Arial, sans-serif;
+        font-size: 11pt;
+        line-height: 1.6
+    }
+
+    .print-quote-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        border-bottom: 3px solid #1a1a2e;
+        padding-bottom: 14px
+    }
+
+    .print-quote-logo img {
+        height: 65px;
+        width: auto;
+        object-fit: contain;
+        background: #fff
+    }
+
+    .print-quote-title {
+        text-align: right
+    }
+
+    .print-quote-title h1 {
+        font-size: 18pt;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin: 0
+    }
+
+    .print-quote-title p {
+        font-size: 11pt;
+        color: #555;
+        margin: 4px 0 0
+    }
+
+    .print-quote-info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px
+    }
+
+    .print-quote-box {
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 14px 16px;
+        background: #f9f9f9
+    }
+
+    .print-quote-box h3 {
+        margin: 0 0 8px;
+        font-size: 11pt;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        color: #555;
+        font-weight: 700;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 6px
+    }
+
+    .print-quote-box p {
+        margin: 3px 0;
+        font-size: 10.5pt
+    }
+
+    .print-quote-box strong,
+    .quote-print-doc td:last-child {
+        color: #1a1a2e
+    }
+
+    .print-quote-validity {
+        background: #fff8e1;
+        border: 1px solid #f9a825;
+        border-radius: 6px;
+        padding: 10px 14px;
+        font-size: 10.5pt;
+        margin-bottom: 20px;
+        color: #5d4037
+    }
+
+    .quote-print-doc h2 {
+        font-size: 12pt;
+        font-weight: 700;
+        color: #1a1a2e;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        border-bottom: 1.5px solid #1a1a2e;
+        padding-bottom: 4px;
+        margin: 20px 0 10px
+    }
+
+    .quote-print-doc table {
+        width: 100%;
+        min-width: 0;
+        border-collapse: collapse;
+        margin-bottom: 14px
+    }
+
+    .quote-print-doc td {
+        border: 1px solid #ddd;
+        padding: 8px 12px;
+        font-size: 10.5pt;
+        vertical-align: top;
+        color: #1a1a2e
+    }
+
+    .quote-print-doc td:first-child {
+        background: #f0f4f8;
+        font-weight: 600;
+        width: 45%
+    }
+
+    .quote-print-doc td:last-child {
+        font-weight: 700
+    }
+
+    .print-quote-notes {
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 14px 16px;
+        font-size: 10pt;
+        white-space: pre-wrap;
+        line-height: 1.7
+    }
+
+    .print-quote-sign {
+        margin-top: 32px;
+        border-top: 2px solid #1a1a2e;
+        padding-top: 10px;
+        font-size: 10.5pt
+    }
+
+    .print-quote-footer {
+        margin-top: 24px;
+        font-size: 9.5pt;
+        color: #888;
+        border-top: 1px solid #eee;
+        padding-top: 10px;
+        text-align: center
     }
 }
 
