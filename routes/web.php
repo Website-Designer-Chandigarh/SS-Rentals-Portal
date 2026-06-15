@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\XeroController;
+use App\Http\Controllers\InvoiceController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -44,9 +44,9 @@ Route::post('/logout', function (Request $request) {
 })->middleware('auth')->name('logout');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/xero/connect', [XeroController::class, 'connect'])->name('xero.connect');
-    Route::get('/xero/callback', [XeroController::class, 'callback'])->name('xero.callback');
-    Route::post('/xero/sync', [XeroController::class, 'sync'])->name('xero.sync');
-    Route::post('/xero/disconnect', [XeroController::class, 'disconnect'])->name('xero.disconnect');
-    Route::post('/xero/invoices/{invoice}/push', [XeroController::class, 'pushInvoice'])->name('xero.invoices.push');
+    Route::get('/invoice/{invoice}/pdf', [InvoiceController::class, 'downloadPdf'])->name('invoice.pdf');
+    Route::get('/invoice/{invoice}/view-pdf', [InvoiceController::class, 'viewPdf'])->name('invoice.view-pdf');
+    Route::post('/invoice/{invoice}/send', [InvoiceController::class, 'sendEmail'])->name('invoice.send');
 });
+
+

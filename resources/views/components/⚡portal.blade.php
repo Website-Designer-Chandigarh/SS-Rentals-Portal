@@ -307,6 +307,11 @@ new class extends Component
         $this->invoiceStep = 4;
     }
 
+    public function downloadInvoicePDF(string $invoiceId): void
+    {
+        $this->redirect(route('invoice.pdf', ['invoice' => $invoiceId]));
+    }
+
     public function generateInvoiceFromHire(string $hireId): void
     {
         $hire = $this->findById($this->hires, $hireId);

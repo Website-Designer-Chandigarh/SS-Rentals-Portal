@@ -35,12 +35,4 @@ return [
         ],
     ],
 
-    'xero' => [
-        'client_id' => env('XERO_CLIENT_ID'),
-        'client_secret' => env('XERO_CLIENT_SECRET'),
-        'redirect_uri' => env('XERO_REDIRECT_URI', env('APP_URL').'/xero/callback'),
-        'sales_account_code' => env('XERO_SALES_ACCOUNT_CODE', '200'),
-        'tax_type' => env('XERO_TAX_TYPE', 'OUTPUT2'),
-    ],
-
 ];

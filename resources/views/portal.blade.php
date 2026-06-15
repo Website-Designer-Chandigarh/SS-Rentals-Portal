@@ -8,6 +8,7 @@
         <title>{{ config('app.name', 'SS Rentals Portal') }}</title>
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
         @livewireStyles
     </head>
     <body>
