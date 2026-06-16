@@ -114,7 +114,7 @@
             <div class="kpi-expand">Click to expand &nearr;</div>
         </button>
         <button type="button" class="kpi-card kpi-click" style="--accent:var(--brand-primary)" wire:click="openModal('kpi-mileage')">
-            <div class="kpi-label">Weekly Mileage Total</div>
+            <div clasghjhs="kpi-label">Weekly Mileage Total</div>
             <div class="kpi-value">{{ number_format($s['weeklyKm']) }} km</div>
             <div class="kpi-sub">All trucks combined</div>
             <div class="kpi-expand">Click to expand &nearr;</div>
@@ -214,9 +214,9 @@
                 @php
                     $trendSign = $month['net'] >= 0 ? '+' : '';
                 @endphp
-                <button type="button" onclick="selectMonth({{ $index }}, event)" class="month-btn{{ $month['isCurrent'] ? ' active' : '' }}" data-index="{{ $index }}" style="flex-shrink: 0; text-align: center; padding: 8px 12px; background: {{ $month['isCurrent'] ? '#F5F5F5' : 'transparent' }}; border-radius: 6px; min-width: 100px; border: {{ $month['isCurrent'] ? '2px solid #333' : '1px solid transparent' }}; cursor: pointer; transition: all 0.2s; font-family: inherit">
+                <button type="button" onclick=`selectMonth({{ $index }}, event)` class="month-btn{{ $month['isCurrent'] ? ' active' : '' }}" data-index="{{ $index }}" style=`flex-shrink: 0; text-align: center; padding: 8px 12px; background: {{ $month['isCurrent'] ? '#F5F5F5' : 'transparent' }}; border-radius: 6px; min-width: 100px; border: {{ $month['isCurrent'] ? '2px solid #333' : '1px solid transparent' }}; cursor: pointer; transition: all 0.2s; font-family: inherit`>
                     <div style="font-size: 11px; font-weight: 600; color: #333">{{ $month['label'] }}</div>
-                    <div style="font-size: 12px; font-weight: 700; color: {{ $month['net'] >= 0 ? '#27AE60' : '#D32F2F' }}; margin-top: 4px">{{ $trendSign }}{{ $this->money($month['net']) }}</div>
+                    <div style=`font-size: 12px; font-weight: 700; color: {{ $month['net'] >= 0 ? '#27AE60' : '#D32F2F' }}; margin-top: 4px`>{{ $trendSign }}{{ $this->money($month['net']) }}</div>
                 </button>
             @endforeach
         </div>
@@ -290,7 +290,7 @@
                     <span id="expensePercent" style="font-size: 12px; color: #333; font-weight: 700">{{ $expensePercent }}%</span>
                 </div>
                 <div style="width: 100%; height: 6px; background: #E0E0E0; border-radius: 3px; overflow: hidden">
-                    <div id="expenseBar" style="width: {{ $expensePercent }}%; height: 100%; background: linear-gradient(90deg, #27AE60 0%, #27AE60 100%); border-radius: 3px; transition: all 0.3s"></div>
+                    <div id="expenseBar" style=`width: {{ $expensePercent }}%; height: 100%; background: linear-gradient(90deg, #27AE60 0%, #27AE60 100%); border-radius: 3px; transition: all 0.3s`></div>
                 </div>
             </div>
         </div>
