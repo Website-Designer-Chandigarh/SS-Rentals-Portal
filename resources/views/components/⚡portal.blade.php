@@ -54,12 +54,23 @@ new class extends Component
     public array $invoiceForm = [];
     public array $quoteForm = [];
     public array $navmanForm = [];
+
+    public array $bankTxns = [];
+    public array $pnlData = [];
+
+    public float $totalRev = 0;
+    public float $totalExp = 0;
+    public float $totalNet = 0;
+
+    public float $totalRUC = 0;
+    public float $totalMaint = 0;
+    public float $totalLoans = 0;
     public array $settingsForm = [
         'company' => 'SS Rentals Ltd',
         'gst' => '123-456-789',
         'address' => 'Auckland, New Zealand',
         'ruc_rate' => '0.062',
-        'invoice_prefix' => 'INV-2026-',
+        'invoice_prefix' => 'INV-',
         'payment_terms' => '7',
         'gst_rate' => '15',
     ];
@@ -75,6 +86,10 @@ new class extends Component
         $this->page = $this->normalizePage($section);
         $this->resetForms();
         $this->savedQuotes = Schema::hasTable('app_settings') ? (AppSetting::query()->find('portal_quotes')?->payload ?: []) : [];
+        if (blank($this->settingsForm['invoice_prefix'] ?? null) || $this->settingsForm['invoice_prefix'] === 'INV-' || preg_match('/^INV-\d{4}-$/', (string) $this->settingsForm['invoice_prefix'])) {
+            $this->settingsForm['invoice_prefix'] = 'INV-'.now()->year.'-';
+        }
+        $this->refreshReportData();
     }
 
     public function setPage(string $page): void
@@ -481,6 +496,82 @@ new class extends Component
 
         $this->flash('Invoice marked paid');
         $this->persist('invoices');
+    }
+
+    public function currentYear(): int
+    {
+        return (int) now()->year;
+    }
+
+    public function currentMonthKey(): string
+    {
+        return now()->format('Y-m');
+    }
+
+    public function currentMonthLabel(): string
+    {
+        return now()->format('F Y');
+    }
+
+    public function currentMonthShortLabel(): string
+    {
+        return now()->format('M Y');
+    }
+
+    public function reportYearLabel(): string
+    {
+        return (string) $this->currentYear();
+    }
+
+    public function displayMonthLabel(?string $value): string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return $this->currentMonthLabel();
+        }
+
+        if (preg_match('/^\d{4}-\d{2}$/', $value)) {
+            return \Illuminate\Support\Carbon::createFromFormat('Y-m', $value)->format('F Y');
+        }
+
+        foreach (['M y', 'M Y', 'F y', 'F Y'] as $format) {
+            try {
+                return \Illuminate\Support\Carbon::createFromFormat('!'.$format, $value)->format('F Y');
+            } catch (\Throwable $e) {
+            }
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::parse($value)->format('F Y');
+        } catch (\Throwable $e) {
+            return $value;
+        }
+    }
+
+    public function currentMonthInvoices(): array
+    {
+        $currentMonth = $this->currentMonthKey();
+
+        return array_values(array_filter($this->invoices, fn ($invoice) => str_starts_with((string) ($invoice['date'] ?? ''), $currentMonth)));
+    }
+
+    private function refreshReportData(): void
+    {
+        $this->pnlData = $this->pnl_detail;
+        $year = $this->currentYear();
+        $ytdRows = array_values(array_filter($this->pnlData, fn ($row) => str_starts_with((string) ($row['month'] ?? ''), $year.'-')));
+
+        $this->totalRev = $this->sumRows($ytdRows, 'revenue');
+        $this->totalExp = $this->sumRows($ytdRows, 'expenses');
+        $this->totalNet = $this->sumRows($ytdRows, 'net');
+        $this->totalRUC = $this->sumRows($ytdRows, 'ruc') + $this->sumRows($ytdRows, 'navman_ruc');
+        $this->totalMaint = $this->sumRows($ytdRows, 'repairs');
+        $this->totalLoans = $this->sumRows($ytdRows, 'flexi') + $this->sumRows($ytdRows, 'heartland');
+    }
+
+    private function sumRows(array $rows, string $key): float
+    {
+        return array_sum(array_map(fn ($row) => (float) ($row[$key] ?? 0), $rows));
     }
 
     private function loadPortalData(): array
@@ -982,8 +1073,8 @@ new class extends Component
         $util = count($this->trucks) ? round(($onHire / count($this->trucks)) * 100) : 0;
         $weekRev = (float) (end($this->weekly_revenue)['amount'] ?? 0);
         $month = end($this->monthly_revenue) ?: ['amount' => 0, 'net' => 0];
-        $outstanding = array_sum(array_map(fn ($i) => ($i['status'] ?? '') !== 'paid' ? (float) ($i['total'] ?? 0) : 0, $this->invoices));
-        $overdue = array_values(array_filter($this->invoices, fn ($i) => ($i['status'] ?? '') === 'overdue'));
+        $outstanding = array_sum(array_map(fn ($i) => ($i['status'] ?? '') !== 'paid' ? (float) ($i['total'] ?? 0) : 0, $this->currentMonthInvoices()));
+        $overdue = array_values(array_filter($this->currentMonthInvoices(), fn ($i) => ($i['status'] ?? '') === 'overdue'));
         $weeklyKm = array_sum(array_map(fn ($t) => (float) ($t['weekly_km'] ?? 0), $this->trucks));
 
         return compact('onHire', 'available', 'util', 'weekRev', 'month', 'outstanding', 'overdue', 'weeklyKm');

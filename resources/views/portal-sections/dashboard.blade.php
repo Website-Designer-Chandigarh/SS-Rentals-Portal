@@ -7,6 +7,8 @@
         $rucCost = $s['weeklyKm'] * 0.062;
         $currentMonth = end($monthly_revenue) ?? [];
         $latestPnl = end($pnl_detail) ?? [];
+        $latestMonthLabel = $this->displayMonthLabel($currentMonth['month'] ?? null);
+        $latestWeekLabel = trim((string) (($weekly_revenue[array_key_last($weekly_revenue)]['week'] ?? '') . ' ' . $this->reportYearLabel()));
         $expenseLabels = [
             'insurance' => 'Insurance',
             'ruc' => 'RUC Charges',
@@ -39,8 +41,8 @@
             return $label;
         };
         
-        // Build all months from actual revenue rows. Monthly revenue labels are "May 26",
-        // while P&L detail keys are "2026-05", matching portal.html.
+        // Build all months from actual revenue rows. Monthly revenue labels are parsed
+        // into a displayable month/year, while P&L detail keys remain YYYY-MM.
         $monthRows = array_slice($monthly_revenue, -11);
         $allMonths = [];
         foreach ($monthRows as $index => $monthData) {
@@ -88,14 +90,14 @@
         <button type="button" class="kpi-card kpi-click" style="--accent:var(--brand-primary)" wire:click="openModal('kpi-weekly-rev')">
             <div class="kpi-label">Weekly Revenue</div>
             <div class="kpi-value">{{ $this->money($s['weekRev']) }}</div>
-            <div class="kpi-sub">Week ending 31 May 2026</div>
+            <div class="kpi-sub">Week ending {{ $latestWeekLabel ?: $this->currentMonthLabel() }}</div>
             <div class="kpi-trend up">&uarr; 10.3% vs last week</div>
             <div class="kpi-expand">Click to expand &nearr;</div>
         </button>
         <button type="button" class="kpi-card kpi-click" style="--accent:#8E44AD" wire:click="openModal('kpi-monthly-rev')">
             <div class="kpi-label">Monthly Revenue</div>
             <div class="kpi-value">{{ $this->money($s['month']['amount']) }}</div>
-            <div class="kpi-sub">May 2026 - Net {{ $this->money($s['month']['net']) }}</div>
+            <div class="kpi-sub">{{ $latestMonthLabel }} - Net {{ $this->money($s['month']['net']) }}</div>
             <div class="kpi-trend up">Best month since Oct 2025</div>
             <div class="kpi-expand">Click to expand &nearr;</div>
         </button>
@@ -128,7 +130,7 @@
     </div>
     <div class="grid mb-4" style="grid-template-columns:2fr 1fr">
         <div class="card">
-            <div class="card-header"><span class="card-title">Monthly Revenue — 2026</span><span class="badge badge-green">YTD</span></div>
+            <div class="card-header"><span class="card-title">Monthly Revenue — {{ $this->reportYearLabel() }}</span><span class="badge badge-green">YTD</span></div>
             <div style="position: relative; height: 300px; padding: 20px">
                 <canvas id="monthlyRevenueChart"></canvas>
             </div>
@@ -225,7 +227,7 @@
         <div style="padding: 0 20px; margin-bottom: 16px">
             <div style="display: flex; align-items: center; justify-content: space-between">
                 <div>
-                    <span class="card-title" id="monthTitle" style="font-size: 16px">May 2026</span>
+                    <span class="card-title" id="monthTitle" style="font-size: 16px">{{ $latestMonthLabel }}</span>
                     <span id="profitBadge" style="margin-left: 12px; background: #C8E6C9; color: #27AE60; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600">PROFIT: {{ $this->money($currentMonth['net'] ?? 0) }}</span>
                 </div>
             </div>
@@ -303,7 +305,7 @@
                 <div style="margin-top:10px"><strong style="color:var(--text)">Utilisation:</strong> {{ $s['util'] }}% — Fleet operating at {{ $s['util'] >= 70 ? 'target efficiency' : 'below-target levels' }}.</div>
             </div>
             <div>
-                <div><strong style="color:var(--text)">Revenue Performance:</strong> May generated {{ $this->money($s['month']['amount']) }} in total revenue with a net profit of {{ $this->money($s['month']['net']) }}.</div>
+                <div><strong style="color:var(--text)">Revenue Performance:</strong> {{ $latestMonthLabel }} generated {{ $this->money($s['month']['amount']) }} in total revenue with a net profit of {{ $this->money($s['month']['net']) }}.</div>
                 <div style="margin-top:10px"><strong style="color:var(--text)">Action Items:</strong> {{ count($s['overdue']) }} overdue invoices totalling {{ $this->money(array_sum(array_column($s['overdue'], 'total'))) }} require immediate follow-up.</div>
             </div>
         </div>

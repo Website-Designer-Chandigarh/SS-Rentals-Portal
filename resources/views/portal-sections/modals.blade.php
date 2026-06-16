@@ -12,6 +12,8 @@
             $weeklyKm = array_sum(array_map(fn($t) => (float) ($t['weekly_km'] ?? 0), $trucks));
             $rucCost = $weeklyKm * 0.062;
             $latestPnl = end($pnl_detail) ?: [];
+            $latestMonthlyRevenue = end($monthly_revenue) ?: [];
+            $latestMonthlyLabel = $this->displayMonthLabel($latestMonthlyRevenue['month'] ?? null);
             $kpiTitles = [
                 'kpi-active-hires' => 'Active Hires',
                 'kpi-fleet-util' => 'Fleet Utilisation',
@@ -70,12 +72,12 @@
                     @foreach($activeHires as $h)<tr><td>{{ $this->customerName($h['customer']) }}</td><td>{{ $this->vehicleRego($h['truck']) }}</td><td class="fw-700">{{ $this->money($h['weekly_truck'] ?? 0) }}</td><td>{{ $this->money($h['mileage_rate'] ?? 0) }}/km</td><td>{{ $this->money($h['ruc_rate'] ?? 0) }}/km</td></tr>@endforeach
                 </tbody></table></div>
             @elseif($modal === 'kpi-monthly-rev')
-                <div class="kpi-modal-stats">{!! $stat('May 2026 Revenue', $this->money(end($monthly_revenue)['amount'] ?? 0), '#6A1B9A') !!}{!! $stat('Net Profit', $this->money(end($monthly_revenue)['net'] ?? 0), '#27AE60') !!}{!! $stat('Total Expenses', $this->money($latestPnl['expenses'] ?? 0), '#FF6F00') !!}</div>
+                <div class="kpi-modal-stats">{!! $stat($latestMonthlyLabel.' Revenue', $this->money($latestMonthlyRevenue['amount'] ?? 0), '#6A1B9A') !!}{!! $stat('Net Profit', $this->money($latestMonthlyRevenue['net'] ?? 0), '#27AE60') !!}{!! $stat('Total Expenses', $this->money($latestPnl['expenses'] ?? 0), '#FF6F00') !!}</div>
                 <div class="section-title">Monthly Trend</div>
                 <div class="table-wrap mb-4"><table><thead><tr><th>Month</th><th>Revenue</th><th>Expenses</th><th>Net Profit</th><th>Margin</th></tr></thead><tbody>
                     @foreach($monthly_revenue as $m) @php $margin = $m['amount'] ? round(($m['net'] / $m['amount']) * 100) : 0; @endphp <tr><td class="fw-700">{{ $m['month'] }}</td><td class="fw-700">{{ $this->money($m['amount']) }}</td><td>{{ $this->money($m['expenses']) }}</td><td class="{{ $m['net'] >= 0 ? 'text-green' : 'text-orange' }} fw-700">{{ $m['net'] >= 0 ? '+' : '' }}{{ $this->money($m['net']) }}</td><td class="{{ $margin >= 10 ? 'text-green' : 'text-orange' }} fw-700">{{ $margin }}%</td></tr> @endforeach
                 </tbody></table></div>
-                <div class="section-title">May Expense Breakdown</div>
+                <div class="section-title">{{ $latestMonthlyLabel }} Expense Breakdown</div>
                 <div class="table-wrap"><table><thead><tr><th>Category</th><th>Amount</th><th>% of Revenue</th></tr></thead><tbody>
                     @foreach(['insurance' => 'Insurance', 'navman_ruc' => 'Navman/RUC', 'ruc' => 'RUC Charges', 'other' => 'Other', 'repairs' => 'Repairs', 'flexi' => 'Flexi Finance', 'heartland' => 'Heartland Finance', 'advertising' => 'Advertising', 'gst' => 'GST/Tax'] as $key => $label)
                         @if(($latestPnl[$key] ?? 0) > 0)<tr><td>{{ $label }}</td><td class="fw-700">{{ $this->money($latestPnl[$key]) }}</td><td class="text-muted">{{ ($latestPnl['revenue'] ?? 0) ? round(($latestPnl[$key] / $latestPnl['revenue']) * 100) : 0 }}%</td></tr>@endif
