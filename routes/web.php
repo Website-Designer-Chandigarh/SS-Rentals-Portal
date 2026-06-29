@@ -10,6 +10,10 @@ Route::get('/', function () {
     return view('login');
 })->middleware('guest')->name('login');
 
+Route::get('/admin', function () {
+    return view('login');
+})->middleware('guest')->name('admin.login');
+
 $portalSections = [
     'dashboard' => 'dashboard',
     'dashabord' => 'dashboard',
@@ -41,7 +45,7 @@ Route::post('/logout', function (Request $request) {
     $request->session()->invalidate();
     $request->session()->regenerateToken();
 
-    return redirect()->route('login');
+    return redirect()->route('admin.login');
 })->middleware('auth')->name('logout');
 
 Route::middleware('auth')->group(function () {
@@ -54,5 +58,4 @@ Route::middleware('auth')->group(function () {
     Route::post('/xero/disconnect', [XeroController::class, 'disconnect'])->name('xero.disconnect');
     Route::post('/xero/invoices/{invoice}/push', [XeroController::class, 'pushInvoice'])->name('xero.invoices.push');
 });
-
 
