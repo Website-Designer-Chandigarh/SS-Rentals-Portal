@@ -1046,7 +1046,9 @@ select option {
     opacity: .78
 }
 
-.quote-print-doc {
+.quote-print-doc,
+.schedule-print-doc,
+.agreement-print-doc {
     display: none
 }
 
@@ -1822,11 +1824,17 @@ select option {
     }
 
     .quote-print-doc,
-    .quote-print-doc * {
+    .quote-print-doc *,
+    .schedule-print-doc,
+    .schedule-print-doc *,
+    .agreement-print-doc,
+    .agreement-print-doc * {
         visibility: visible !important
     }
 
-    .quote-print-doc {
+    .quote-print-doc,
+    .schedule-print-doc,
+    .agreement-print-doc {
         display: block !important;
         position: absolute;
         inset: 0 auto auto 0;
@@ -1837,6 +1845,36 @@ select option {
         font-family: Arial, sans-serif;
         font-size: 11pt;
         line-height: 1.6
+    }
+
+    .agreement-print-doc p {
+        margin: 6px 0;
+        font-size: 10.5pt
+    }
+
+    .print-doc-highlight {
+        background: #fff8e1;
+        border: 1px solid #f9a825;
+        border-radius: 6px;
+        padding: 10px 14px;
+        color: #5d4037
+    }
+
+    .print-doc-guarantee {
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 14px 16px;
+        background: #f9f9f9;
+        margin-top: 10px
+    }
+
+    .print-doc-sig-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-top: 32px;
+        border-top: 2px solid #1a1a2e;
+        padding-top: 14px
     }
 
     .print-quote-header {
@@ -1917,7 +1955,9 @@ select option {
         color: #5d4037
     }
 
-    .quote-print-doc h2 {
+    .quote-print-doc h2,
+    .schedule-print-doc h2,
+    .agreement-print-doc h2 {
         font-size: 12pt;
         font-weight: 700;
         color: #1a1a2e;
@@ -1928,14 +1968,18 @@ select option {
         margin: 20px 0 10px
     }
 
-    .quote-print-doc table {
+    .quote-print-doc table,
+    .schedule-print-doc table,
+    .agreement-print-doc table {
         width: 100%;
         min-width: 0;
         border-collapse: collapse;
         margin-bottom: 14px
     }
 
-    .quote-print-doc td {
+    .quote-print-doc td,
+    .schedule-print-doc td,
+    .agreement-print-doc td {
         border: 1px solid #ddd;
         padding: 8px 12px;
         font-size: 10.5pt;
@@ -1943,13 +1987,17 @@ select option {
         color: #1a1a2e
     }
 
-    .quote-print-doc td:first-child {
+    .quote-print-doc td:first-child,
+    .schedule-print-doc td:first-child,
+    .agreement-print-doc td:first-child {
         background: #f0f4f8;
         font-weight: 600;
         width: 45%
     }
 
-    .quote-print-doc td:last-child {
+    .quote-print-doc td:last-child,
+    .schedule-print-doc td:last-child,
+    .agreement-print-doc td:last-child {
         font-weight: 700
     }
 

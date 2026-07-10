@@ -55,6 +55,9 @@ new class extends Component
     public array $quoteForm = [];
     public array $navmanForm = [];
 
+    public ?string $docHireId = null;
+    public ?string $docType = null;
+
     public array $bankTxns = [];
     public array $pnlData = [];
 
@@ -380,7 +383,30 @@ new class extends Component
         }
 
         $this->flash('Quote saved');
-        $this->js('setTimeout(() => window.print(), 100)');
+        $isLease = ($this->quoteForm['chargeType'] ?? '') === 'monthly' && (float) ($this->quoteForm['weeklyRate'] ?? 0) <= 0;
+        $filename = ($isLease ? 'LeaseQuote' : 'RentalQuote').'_'.($this->quoteForm['quoteNumber'] ?? 'Quote').'_'.$this->filenameSlug($this->quoteForm['companyName'] ?? '');
+        $this->js('document.title = '.json_encode($filename).'; setTimeout(() => window.print(), 100)');
+    }
+
+    public function downloadHireDoc(string $hireId, string $type): void
+    {
+        $this->docHireId = $hireId;
+        $this->docType = $type;
+
+        $hire = $this->findById($this->hires, $hireId);
+        $customer = $hire ? $this->findById($this->customers, $hire['customer'] ?? null) : null;
+        $isLease = ($hire['charge_type'] ?? 'weekly') === 'monthly';
+        $companySlug = $this->filenameSlug($customer['company'] ?? '');
+        $filename = $type === 'schedule'
+            ? 'Schedule_'.$hireId.'_'.$companySlug
+            : 'Truck_and_Trailer_'.($isLease ? 'Lease' : 'Rental').'_Agreement_'.$hireId.'_'.$companySlug;
+
+        $this->js('document.title = '.json_encode($filename).'; setTimeout(() => window.print(), 100)');
+    }
+
+    private function filenameSlug(string $value): string
+    {
+        return trim(preg_replace('/[^A-Za-z0-9]+/', '_', $value), '_');
     }
 
     private function storeQuote(): bool
@@ -790,6 +816,13 @@ new class extends Component
                 'weeklyRate' => 0, 'monthlyRate' => 11189.33, 'rucRate' => 0, 'mileageRate' => 0, 'duration' => 12, 'durationUnit' => 'months',
                 'notes' => "All prices are in NZD and exclude GST.\nRUC charges will be paid by hirer via DDB.\nMileage charges are included in the monthly lease payment.\nContract maximum mileage is 130,000 km per annum.\nQuotes exclude GST, fuel, and insurance costs.\nThis is a fully maintained truck and trailer lease quote.",
             ],
+            [
+                'id' => 'QT006', 'name' => 'Volvo FH600 & 5-Axle Curtainsider Lease Quote (Multi-Term)', 'type' => 'truck_trailer', 'chargeType' => 'monthly',
+                'truckDesc' => '2022 Volvo FH 600', 'trailerDesc' => '2017 Domett E2001 5-Axle Curtainsider (WMezz)',
+                'weeklyRate' => 0, 'monthlyRate' => 9750.33, 'rucRate' => 0.65, 'mileageRate' => 0.30, 'duration' => 1, 'durationUnit' => 'years',
+                'maxMileage' => '21,833 km/month', 'eroadRate' => 0, 'altTerm3Rate' => 9350.21, 'altTerm5Rate' => 8990.11,
+                'notes' => "All prices are in NZD and exclude GST.\nMonthly lease rate is fixed for the lease term.\nEroad GPS monitoring charge of \$200 + GST per month applies in addition to the monthly lease rate.\nLessee is responsible for all insurance, RUC, fuel, and operating costs.\nContract maximum mileage is 21,833 km per month.\nThis is a fully maintained truck and trailer lease.",
+            ],
         ];
     }
 
@@ -826,7 +859,10 @@ new class extends Component
             'monthlyRate' => $template['monthlyRate'] ?? 0,
             'rucRate' => $template['rucRate'] ?? 0,
             'mileageRate' => $template['mileageRate'] ?? 0,
-            'maxMileage' => '130,000 km p.a. (10,833 km/month)',
+            'maxMileage' => $template['maxMileage'] ?? '130,000 km p.a. (10,833 km/month)',
+            'eroadRate' => $template['eroadRate'] ?? 0,
+            'altTerm3Rate' => $template['altTerm3Rate'] ?? 0,
+            'altTerm5Rate' => $template['altTerm5Rate'] ?? 0,
             'notes' => $template['notes'] ?? "All prices are in NZD and exclude GST.\nRUC and mileage charges apply on top of hire rates.\nQuotes exclude GST, fuel, and insurance costs.",
         ];
     }
@@ -857,10 +893,13 @@ new class extends Component
     {
         return [
             'id' => '', 'customer' => '', 'truck' => '', 'trailer' => null, 'start' => now()->toDateString(),
-            'end' => now()->addWeek()->toDateString(), 'status' => 'active', 'weekly_truck' => 0, 'weekly_trailer' => 0,
+            'end' => now()->addWeek()->toDateString(), 'status' => 'active', 'charge_type' => 'weekly',
+            'weekly_truck' => 0, 'weekly_trailer' => 0, 'monthly_rate' => 0, 'eroad_rate' => 0, 'max_mileage' => '',
             'mileage_rate' => 0.25, 'ruc_rate' => 0.62, 'bond' => 0, 'bond_paid' => false, 'invoiced_to' => null,
             'next_invoice' => now()->addWeek()->toDateString(), 'signed' => false, 'insurance_verified' => false,
-            'checklist_done' => false, 'notes' => '',
+            'checklist_done' => false, 'payment_method' => "Payment will be deducted automatically from nominated account via direct debit after sending the invoice.",
+            'truck_vin' => '', 'truck_colour' => 'White', 'trailer_colour' => 'White',
+            'guarantor_name' => '', 'guarantor_address' => '', 'guarantor_phone' => '', 'notes' => '',
         ];
     }
 

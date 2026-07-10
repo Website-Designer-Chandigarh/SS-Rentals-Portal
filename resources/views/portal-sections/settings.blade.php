@@ -59,6 +59,7 @@
         <div class="form-group"><label>Default Payment Terms (days)</label><input wire:model="settingsForm.payment_terms"></div>
         <div class="form-group"><label>GST Rate (%)</label><input wire:model="settingsForm.gst_rate"></div>
         <button type="button" class="btn btn-primary btn-sm" wire:click="saveSettings">Save Changes</button>
+          @if(false)
           <div class="card" style="grid-column:1 / -1">
         <div class="card-header">
             <div>
@@ -97,5 +98,6 @@
         </div>
         <div class="alert alert-orange mt-4">Set <code>XERO_CLIENT_ID</code>, <code>XERO_CLIENT_SECRET</code>, and <code>XERO_REDIRECT_URI</code> in <code>.env</code>. In Xero Developer, the redirect URI must match exactly.</div>
     </div>
+    @endif
     </div>
 </div>

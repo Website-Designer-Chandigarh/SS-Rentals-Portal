@@ -19,6 +19,7 @@
         <div class="alert alert-red">{{ session('xero_error') }}</div>
     @endif
 
+    @if(false)
     <div class="xero-status-card mb-4">
         <div class="xero-check {{ $xeroConnected ? '' : 'disconnected' }}">{{ $xeroConnected ? '✓' : '!' }}</div>
         <div class="xero-status-copy">
@@ -44,6 +45,7 @@
             @endif
         </div>
     </div>
+    @endif
 
     <div class="grid grid-4 mb-4">
         <div class="card card-sm"><div class="kpi-label">Total Invoiced ({{ $currentMonthLabel }})</div><div class="invoice-kpi">{{ $this->money($allInvoiceTotal) }}</div></div>

@@ -84,7 +84,20 @@
                 if ($quoteForm['maxMileage'] ?? null) {
                     $quoteChargeRows[] = ['Maximum Mileage', $quoteForm['maxMileage']];
                 }
-                $quoteTitle = 'SS Rentals '.(($quoteForm['chargeType'] ?? '') === 'monthly' && (float) ($quoteForm['weeklyRate'] ?? 0) <= 0 ? 'Lease' : 'Rental').' Quotation';
+                $isLeaseQuote = ($quoteForm['chargeType'] ?? '') === 'monthly' && (float) ($quoteForm['weeklyRate'] ?? 0) <= 0;
+                if ($isLeaseQuote && $quoteForm['eroadRate'] !== '' && $quoteForm['eroadRate'] !== null) {
+                    $quoteChargeRows[] = ['Eroad GPS Monitoring', $this->money((float) $quoteForm['eroadRate']).' + GST per month'];
+                }
+                $quoteAltTerms = [];
+                if ($isLeaseQuote) {
+                    if ((float) ($quoteForm['altTerm3Rate'] ?? 0) > 0) {
+                        $quoteAltTerms[] = ['3-Year Lease Rate', $this->money($quoteForm['altTerm3Rate']).' per month + GST'];
+                    }
+                    if ((float) ($quoteForm['altTerm5Rate'] ?? 0) > 0) {
+                        $quoteAltTerms[] = ['5-Year Lease Rate', $this->money($quoteForm['altTerm5Rate']).' per month + GST'];
+                    }
+                }
+                $quoteTitle = 'SS Rentals '.($isLeaseQuote ? 'Lease' : 'Rental').' Quotation';
             @endphp
             <div class="quote-builder">
                 <div class="quote-breadcrumb">
@@ -203,7 +216,20 @@
                                 <div class="form-group"><label>Mileage Rate ($/km)</label><input type="number" step="0.01" wire:model.live="quoteForm.mileageRate"></div>
                                 <div class="form-group"><label>Maximum Mileage Allowance</label><input wire:model.live="quoteForm.maxMileage"></div>
                             </div>
+                            @if(($quoteForm['chargeType'] ?? '') === 'monthly')
+                                <div class="form-group"><label>Eroad GPS Monitoring ($/month)</label><input type="number" step="0.01" wire:model.live="quoteForm.eroadRate"></div>
+                            @endif
                         </div>
+
+                        @if(($quoteForm['chargeType'] ?? '') === 'monthly')
+                            <div class="card">
+                                <div class="section-title">Alternative Lease Terms</div>
+                                <div class="form-row">
+                                    <div class="form-group"><label>3-Year Rate ($/month)</label><input type="number" step="0.01" wire:model.live="quoteForm.altTerm3Rate"></div>
+                                    <div class="form-group"><label>5-Year Rate ($/month)</label><input type="number" step="0.01" wire:model.live="quoteForm.altTerm5Rate"></div>
+                                </div>
+                            </div>
+                        @endif
 
                         <div class="card">
                             <div class="section-title">Notes & Conditions</div>
@@ -272,6 +298,14 @@
                         <tr><td>Charges</td><td>-</td></tr>
                     @endforelse
                 </table>
+                @if(count($quoteAltTerms))
+                    <h2>Alternative Lease Terms</h2>
+                    <table>
+                        @foreach($quoteAltTerms as [$label, $value])
+                            <tr><td>{{ $label }}</td><td>{{ $value }}</td></tr>
+                        @endforeach
+                    </table>
+                @endif
                 <h2>Notes & Conditions</h2>
                 <div class="print-quote-notes">{{ $quoteForm['notes'] }}</div>
                 <div class="print-quote-sign">
@@ -285,8 +319,17 @@
     @else
         <div class="table-wrap"><table><thead><tr><th>Hire</th><th>Customer</th><th>Truck</th><th>Trailer</th><th>Start</th><th>End</th><th>Weekly</th><th>Status</th><th></th></tr></thead><tbody>
             @foreach($this->filteredHires() as $h)
-                <tr><td class="fw-700">{{ $h['id'] }}</td><td>{{ $this->customerName($h['customer']) }}</td><td>{{ $this->vehicleRego($h['truck']) }}</td><td>{{ $this->vehicleRego($h['trailer'] ?? null) }}</td><td>{{ $this->fmt($h['start']) }}</td><td>{{ $this->fmt($h['end']) }}</td><td>{{ $this->money(($h['weekly_truck'] ?? 0) + ($h['weekly_trailer'] ?? 0)) }}</td><td><span class="{{ $this->statusClass($h['status']) }}">{{ $this->statusLabel($h['status']) }}</span></td><td class="flex gap-2"><button type="button" class="btn btn-ghost btn-sm" wire:click="openModal('hire','{{ $h['id'] }}')">Edit</button><button type="button" class="btn btn-add btn-sm" wire:click="generateInvoiceFromHire('{{ $h['id'] }}')">Invoice</button></td></tr>
+                <tr><td class="fw-700">{{ $h['id'] }}</td><td>{{ $this->customerName($h['customer']) }}</td><td>{{ $this->vehicleRego($h['truck']) }}</td><td>{{ $this->vehicleRego($h['trailer'] ?? null) }}</td><td>{{ $this->fmt($h['start']) }}</td><td>{{ $this->fmt($h['end']) }}</td><td>{{ ($h['charge_type'] ?? 'weekly') === 'monthly' ? $this->money($h['monthly_rate'] ?? 0).'/mo' : $this->money(($h['weekly_truck'] ?? 0) + ($h['weekly_trailer'] ?? 0)).'/wk' }}</td><td><span class="{{ $this->statusClass($h['status']) }}">{{ $this->statusLabel($h['status']) }}</span></td><td class="flex gap-2"><button type="button" class="btn btn-ghost btn-sm" wire:click="openModal('hire','{{ $h['id'] }}')">Edit</button><button type="button" class="btn btn-add btn-sm" wire:click="generateInvoiceFromHire('{{ $h['id'] }}')">Invoice</button><button type="button" class="btn btn-ghost btn-sm" wire:click="downloadHireDoc('{{ $h['id'] }}','schedule')">Schedule</button><button type="button" class="btn btn-ghost btn-sm" wire:click="downloadHireDoc('{{ $h['id'] }}','agreement')">Agreement</button></td></tr>
             @endforeach
         </tbody></table></div>
+    @endif
+
+    @if($docHireId && in_array($docType, ['schedule', 'agreement']))
+        @php
+            $docHire = $this->findById($hires, $docHireId);
+        @endphp
+        @if($docHire)
+            @include('portal-sections.hire-docs', ['docHire' => $docHire, 'docType' => $docType])
+        @endif
     @endif
 </div>
