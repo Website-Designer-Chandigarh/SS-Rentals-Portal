@@ -173,8 +173,20 @@
                 </div>
                 <div class="form-group"><label>Notes</label><textarea wire:model="customerForm.notes" rows="3" placeholder="Any relevant notes about this customer..."></textarea></div>
             @elseif($modal === 'hire')
-                <div class="form-row mb-4"><div class="form-group"><label>Customer</label><select wire:model="hireForm.customer"><option value="">Select customer...</option>@foreach($customers as $c)<option value="{{ $c['id'] }}">{{ $c['company'] }}</option>@endforeach</select></div><div class="form-group"><label>Assign Truck</label><select wire:model="hireForm.truck"><option value="">Select truck...</option>@foreach($trucks as $t)<option value="{{ $t['id'] }}">{{ $t['rego'] }} - {{ $t['make'] }} {{ $t['model'] }}</option>@endforeach</select></div></div>
-                <div class="form-row mb-4"><div class="form-group"><label>Assign Trailer (optional)</label><select wire:model="hireForm.trailer"><option value="">No trailer</option>@foreach($trailers as $t)<option value="{{ $t['id'] }}">{{ $t['rego'] }} - {{ $t['make'] }} {{ $t['model'] }}</option>@endforeach</select></div><div class="form-group"><label>Hire Start Date</label><input type="date" wire:model="hireForm.start"></div></div>
+                <div class="form-row mb-4">
+                    <div class="form-group"><label>Customer</label>
+                        @include('portal-sections.searchable-select', ['model' => 'hireForm.customer', 'current' => $hireForm['customer'] ?? '', 'placeholder' => 'Select customer...', 'options' => collect($customers)->map(fn($c) => ['value' => $c['id'], 'label' => $c['company'], 'sub' => $c['contact'] ?? null])->all()])
+                    </div>
+                    <div class="form-group"><label>Assign Truck</label>
+                        @include('portal-sections.searchable-select', ['model' => 'hireForm.truck', 'current' => $hireForm['truck'] ?? '', 'placeholder' => 'Select truck...', 'options' => collect($trucks)->map(fn($t) => ['value' => $t['id'], 'label' => $t['rego'], 'sub' => trim(($t['make'] ?? '').' '.($t['model'] ?? ''))])->all()])
+                    </div>
+                </div>
+                <div class="form-row mb-4">
+                    <div class="form-group"><label>Assign Trailer (optional)</label>
+                        @include('portal-sections.searchable-select', ['model' => 'hireForm.trailer', 'current' => $hireForm['trailer'] ?? '', 'placeholder' => 'No trailer', 'options' => collect($trailers)->map(fn($t) => ['value' => $t['id'], 'label' => $t['rego'], 'sub' => trim(($t['make'] ?? '').' '.($t['model'] ?? ''))])->all()])
+                    </div>
+                    <div class="form-group"><label>Hire Start Date</label><input type="date" wire:model="hireForm.start"></div>
+                </div>
                 <div class="form-row mb-4"><div class="form-group"><label>Hire End Date</label><input type="date" wire:model="hireForm.end"></div><div class="form-group"><label>Charge Type</label><select wire:model.live="hireForm.charge_type"><option value="weekly">Weekly</option><option value="monthly">Monthly (Lease)</option></select></div></div>
                 @if(($hireForm['charge_type'] ?? 'weekly') === 'monthly')
                     <div class="form-row mb-4"><div class="form-group"><label>Monthly Lease Rate (NZD)</label><input type="number" wire:model="hireForm.monthly_rate"></div><div class="form-group"><label>Eroad GPS Monitoring ($/month)</label><input type="number" wire:model="hireForm.eroad_rate"></div></div>
@@ -213,7 +225,9 @@
                 </div>
                 @if($invoiceStep === 1)
                     <div class="wizard-title">Select Vehicle & Invoice Type</div>
-                    <div class="form-group"><label>Vehicle on Hire</label><select wire:model.live="invoiceForm.hire"><option value="">-- Select vehicle --</option>@foreach($activeHires as $h)<option value="{{ $h['id'] }}">{{ $this->vehicleRego($h['truck']) }} - {{ $this->customerName($h['customer']) }}</option>@endforeach</select></div>
+                    <div class="form-group"><label>Vehicle on Hire</label>
+                        @include('portal-sections.searchable-select', ['model' => 'invoiceForm.hire', 'current' => $invoiceForm['hire'] ?? '', 'placeholder' => '-- Select vehicle --', 'options' => collect($activeHires)->map(fn($h) => ['value' => $h['id'], 'label' => $this->vehicleRego($h['truck']), 'sub' => $this->customerName($h['customer'])])->all()])
+                    </div>
                     @if($selectedHire && $invoiceCustomer)
                         <div class="auto-panel mb-4">
                             <div class="auto-panel-title">Auto-retrieved from hire record</div>

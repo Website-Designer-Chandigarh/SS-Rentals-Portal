@@ -753,8 +753,10 @@ new class extends Component
         return array_merge(
             ['customer_id' => $row['customer'] ?? null, 'truck_id' => $row['truck'] ?? null, 'trailer_id' => $row['trailer'] ?: null],
             Arr::only($row, [
-                'start', 'end', 'status', 'weekly_truck', 'weekly_trailer', 'mileage_rate', 'ruc_rate', 'bond', 'bond_paid',
-                'invoiced_to', 'next_invoice', 'signed', 'insurance_verified', 'checklist_done', 'notes',
+                'start', 'end', 'status', 'charge_type', 'weekly_truck', 'weekly_trailer', 'monthly_rate', 'eroad_rate',
+                'mileage_rate', 'ruc_rate', 'max_mileage', 'bond', 'bond_paid', 'invoiced_to', 'next_invoice', 'signed',
+                'insurance_verified', 'checklist_done', 'payment_method', 'truck_vin', 'truck_colour', 'trailer_colour',
+                'guarantor_name', 'guarantor_address', 'guarantor_phone', 'notes',
             ]),
         );
     }

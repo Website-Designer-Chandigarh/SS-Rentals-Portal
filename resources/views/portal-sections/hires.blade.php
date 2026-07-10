@@ -127,12 +127,7 @@
                             @if(($quoteForm['customerMode'] ?? 'new') === 'existing')
                                 <div class="form-group">
                                     <label>Select Customer</label>
-                                    <select wire:model.live="quoteForm.useExistingCustomer" wire:change="selectQuoteCustomer">
-                                        <option value="">Select customer...</option>
-                                        @foreach(collect($customers)->where('status', '!=', 'blacklisted')->sortBy('company') as $customer)
-                                            <option value="{{ $customer['id'] }}">{{ $customer['company'] }}{{ $customer['contact'] ? ' · '.$customer['contact'] : '' }}</option>
-                                        @endforeach
-                                    </select>
+                                    @include('portal-sections.searchable-select', ['model' => 'quoteForm.useExistingCustomer', 'current' => $quoteForm['useExistingCustomer'] ?? '', 'placeholder' => 'Select customer...', 'onChange' => 'selectQuoteCustomer', 'options' => collect($customers)->where('status', '!=', 'blacklisted')->sortBy('company')->map(fn($c) => ['value' => $c['id'], 'label' => $c['company'], 'sub' => $c['contact'] ?? null])->values()->all()])
                                 </div>
                                 @if($quoteForm['companyName'])
                                     <div class="auto-panel">{{ $quoteForm['companyName'] }}{{ $quoteForm['contactName'] ? ' · '.$quoteForm['contactName'] : '' }}{{ $quoteForm['contactPhone'] ? ' · '.$quoteForm['contactPhone'] : '' }}</div>
